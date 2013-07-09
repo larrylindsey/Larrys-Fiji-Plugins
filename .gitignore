@@ -40,3 +40,5 @@
 # Wiki monitor #
 /.recent-changes.*
 
+# target folder
+target
