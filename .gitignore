@@ -1,0 +1,42 @@
+# Editors #
+*.swp
+*~
+
+# Maven #
+/bin/apache-maven-*/
+/src-plugins/*/target/
+
+# Fiji Build #
+/.tmp.*/
+
+# Eclipse #
+.checksums
+.metadata
+.project
+.classpath
+.settings/
+
+# IntelliJ #
+*.iml
+
+# ImageJ 1.x #
+/IJ_Prefs.txt
+
+# Updater #
+/db.xml.gz
+
+# Cached sample images #
+/samples/
+
+# ImageJ Launcher #
+/jvm.cfg
+
+# MacOSX #
+.DS_Store
+
+# Windows #
+/bin/RCEDIT.exe
+
+# Wiki monitor #
+/.recent-changes.*
+
