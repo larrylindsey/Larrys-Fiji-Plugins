@@ -15,7 +15,7 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.labeling.NativeImgLabeling;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.LongType;
+import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 
 import java.awt.image.ColorModel;
@@ -26,9 +26,9 @@ import java.util.concurrent.*;
 public class SerialSectionConnectedComponents implements Algorithm, Benchmark
 {
 
-    private class ConnectedComponentsCallable implements Callable<Img<LongType>>
+    private class ConnectedComponentsCallable implements Callable<Img<IntType>>
     {
-        private Iterator<LongType> namer = new Iterator<LongType>()
+        private Iterator<IntType> namer = new Iterator<IntType>()
         {
 
             public boolean hasNext()
@@ -36,9 +36,9 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
                 return true;
             }
 
-            public LongType next()
+            public IntType next()
             {
-                return new LongType(i++);
+                return new IntType(i++);
             }
 
             public void remove()
@@ -49,7 +49,7 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
 
 
         private final ImagePlus sliceImp;
-        private long i;
+        private int i;
         private final int idx;
 
         public ConnectedComponentsCallable(final ImagePlus sliceImp, int idx)
@@ -59,19 +59,19 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
             this.idx = idx;
         }
 
-        public Img<LongType> call() throws Exception
+        public Img<IntType> call() throws Exception
         {
             Img<UnsignedByteType> img = ImagePlusAdapter.wrap(sliceImp);
             Img<BitType> imgT;
-            Img<LongType> label;
+            Img<IntType> label;
 
             long[] dimensions = new long[img.numDimensions()];
-            NativeImgLabeling<LongType, LongType> labeling;
+            NativeImgLabeling<IntType, IntType> labeling;
 
 
             img.dimensions(dimensions);
-            label = new ArrayImgFactory<LongType>().create(dimensions, new LongType());
-            labeling = new NativeImgLabeling<LongType, LongType>(label);
+            label = new ArrayImgFactory<IntType>().create(dimensions, new IntType());
+            labeling = new NativeImgLabeling<IntType, IntType>(label);
             imgT = new ArrayImgFactory<BitType>().create(dimensions, new BitType());
 
 
@@ -89,23 +89,23 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
         }
     }
 
-    private class ReindexCallable implements Callable<Img<LongType>>
+    private class ReindexCallable implements Callable<Img<IntType>>
     {
 
         private final int idx;
-        private final Img<LongType> img;
+        private final Img<IntType> img;
 
-        public ReindexCallable(final Img<LongType> img, final int idx)
+        public ReindexCallable(final Img<IntType> img, final int idx)
         {
             this.idx = idx;
             this.img = img;
         }
 
-        public Img<LongType> call() throws Exception
+        public Img<IntType> call() throws Exception
         {
-            final Cursor<LongType> cursor = img.cursor();
-            long addVal = 0;
-            LongType it;
+            final Cursor<IntType> cursor = img.cursor();
+            int addVal = 0;
+            IntType it;
 
             for (int i = 0; i < idx; ++i)
             {
@@ -133,8 +133,9 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
     private String errorMsg;
     private final ImagePlus imp;
     private float threshold;
+    private boolean thresholdGT;
     private long[] maxVal;
-    private ArrayList<Img<LongType>> ccImgs;
+    private ArrayList<Img<IntType>> ccImgs;
 
     public SerialSectionConnectedComponents(ImagePlus imp)
     {
@@ -147,11 +148,13 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
         this.imp = imp;
         errorMsg = "";
         threshold = 0.5f;
+        thresholdGT = true;
     }
 
-    public void setThreshold(final float t)
+    public void setThreshold(final float t, final boolean gt)
     {
         threshold = t;
+        thresholdGT = gt;
     }
 
 
@@ -160,18 +163,13 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
         return imp.getType() != ImagePlus.COLOR_RGB && imp.getType() != ImagePlus.COLOR_256;
     }
 
-    public boolean process()
+    public ArrayList<Future<Img<IntType>>> connectedComponentsFutures()
     {
-        final long sTime = System.currentTimeMillis();
         final ImageStack is = imp.getImageStack();
-        final ArrayList<Future<Img<LongType>>> ccFutures =
-                new ArrayList<Future<Img<LongType>>>(is.getSize());
-        final ArrayList<Future<Img<LongType>>> riFutures =
-                new ArrayList<Future<Img<LongType>>>(is.getSize() - 1);
-        ccImgs = new ArrayList<Img<LongType>>(is.getSize());
-
-
         maxVal = new long[is.getSize()];
+        final ArrayList<Future<Img<IntType>>> ccFutures =
+                new ArrayList<Future<Img<IntType>>>(is.getSize());
+
 
         if (is.getSize() > 1)
         {
@@ -188,6 +186,17 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
             ccFutures.add(service.submit(new ConnectedComponentsCallable(imp, 1)));
         }
 
+        return ccFutures;
+    }
+
+    public boolean process()
+    {
+        final long sTime = System.currentTimeMillis();
+        final ArrayList<Future<Img<IntType>>> ccFutures = connectedComponentsFutures();
+        final ArrayList<Future<Img<IntType>>> riFutures =
+                new ArrayList<Future<Img<IntType>>>(ccFutures.size() - 1);
+        ccImgs = new ArrayList<Img<IntType>>(ccFutures.size());
+
         try
         {
             for (int i = 0; i < ccFutures.size(); ++i)
@@ -202,7 +211,7 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
                 }
             }
 
-            for (Future<Img<LongType>> future : riFutures)
+            for (Future<Img<IntType>> future : riFutures)
             {
                 ccImgs.add(future.get());
             }
@@ -221,21 +230,24 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
         pTime = System.currentTimeMillis() - sTime;
         return true;
     }
+    
+
 
     public ImageStack getImageStack()
     {
         final ImageStack outputStack = new ImageStack(imp.getWidth(), imp.getHeight(),
                 ColorModel.getRGBdefault());
-        for (final Img<LongType> img : ccImgs)
+        for (final Img<IntType> img : ccImgs)
         {
-            outputStack.addSlice(ImageJFunctions.wrap(img, "Image").getProcessor());
+
+            outputStack.addSlice(ImageJFunctions.wrapFloat(img, "Image").getProcessor());
         }
         return outputStack;
     }
 
-    public ArrayList<Img<LongType>> getImgs()
+    public ArrayList<Img<IntType>> getImgs()
     {
-        return new ArrayList<Img<LongType>>(ccImgs);
+        return new ArrayList<Img<IntType>>(ccImgs);
     }
 
 
@@ -261,7 +273,7 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
             target.fwd();
             source.setPosition(target);
             test = source.get().getRealDouble() / max >= threshold;
-            target.get().set(test);
+            target.get().set(test == thresholdGT);
         }
     }
 }
