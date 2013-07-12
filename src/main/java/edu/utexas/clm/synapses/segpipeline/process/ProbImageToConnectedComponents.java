@@ -1,6 +1,5 @@
 package edu.utexas.clm.synapses.segpipeline.process;
 
-import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import net.imglib2.Cursor;
@@ -8,7 +7,6 @@ import net.imglib2.RandomAccess;
 import net.imglib2.algorithm.Algorithm;
 import net.imglib2.algorithm.Benchmark;
 import net.imglib2.algorithm.labeling.AllConnectedComponents;
-import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.display.imagej.ImageJFunctions;
@@ -16,117 +14,90 @@ import net.imglib2.labeling.NativeImgLabeling;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
 
 import java.awt.image.ColorModel;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.concurrent.*;
 
-public class SerialSectionConnectedComponents implements Algorithm, Benchmark
+public class ProbImageToConnectedComponents implements Algorithm, Benchmark
 {
-
-    private class ConnectedComponentsCallable implements Callable<Img<IntType>>
+    private static class IntTypeNamer implements Iterator<IntType>
     {
-        private Iterator<IntType> namer = new Iterator<IntType>()
+        int i;
+
+        public IntTypeNamer(int start)
         {
-
-            public boolean hasNext()
-            {
-                return true;
-            }
-
-            public IntType next()
-            {
-                return new IntType(i++);
-            }
-
-            public void remove()
-            {
-
-            }
-        };
-
-
-        private final ImagePlus sliceImp;
-        private int i;
-        private final int idx;
-
-        public ConnectedComponentsCallable(final ImagePlus sliceImp, int idx)
-        {
-            i = 1;
-            this.sliceImp = sliceImp;
-            this.idx = idx;
+            i = start;
         }
 
-        public Img<IntType> call() throws Exception
+        public boolean hasNext()
         {
-            Img<UnsignedByteType> img = ImagePlusAdapter.wrap(sliceImp);
-            Img<BitType> imgT;
-            Img<IntType> label;
+            return true;
+        }
 
-            long[] dimensions = new long[img.numDimensions()];
-            NativeImgLabeling<IntType, IntType> labeling;
+        public IntType next()
+        {
+            return new IntType(i++);
+        }
 
+        public void remove()
+        {
 
-            img.dimensions(dimensions);
-            label = new ArrayImgFactory<IntType>().create(dimensions, new IntType());
-            labeling = new NativeImgLabeling<IntType, IntType>(label);
-            imgT = new ArrayImgFactory<BitType>().create(dimensions, new BitType());
+        }
 
-
-            thresholdImg(img, imgT);
-
-            AllConnectedComponents.labelAllConnectedComponents(
-                    labeling,
-                    imgT,
-                    namer,
-                    new long[][]{{-1, 0}, {1, 0}, {0, -1}, {0, 1}});
-
-            maxVal[idx - 1] = i;
-
-            return label;
+        public int getLastValue()
+        {
+            return i;
         }
     }
 
-    private class ReindexCallable implements Callable<Img<IntType>>
+
+    public static <T extends RealType<T>> Img<IntType> connectedComponents(
+            final Img<T> img, final float threshold, final boolean gt, final float[] maxVal,
+            final int idx)
     {
+        final long[] dimensions = new long[img.numDimensions()];
+        final IntTypeNamer namer = new IntTypeNamer(1);
+        Img<BitType> imgT;
+        Img<IntType> label;
+        NativeImgLabeling<IntType, IntType> labeling;
 
-        private final int idx;
-        private final Img<IntType> img;
+        img.dimensions(dimensions);
+        label = new ArrayImgFactory<IntType>().create(dimensions, new IntType());
+        labeling = new NativeImgLabeling<IntType, IntType>(label);
+        imgT = new ArrayImgFactory<BitType>().create(dimensions, new BitType());
 
-        public ReindexCallable(final Img<IntType> img, final int idx)
+
+        thresholdImg(img, imgT, threshold, gt);
+
+        AllConnectedComponents.labelAllConnectedComponents(
+                labeling,
+                imgT,
+                namer,
+                new long[][]{{-1, 0}, {1, 0}, {0, -1}, {0, 1}});
+
+        maxVal[idx - 1] = namer.getLastValue();
+
+        return label;
+    }
+
+    public static <T extends RealType<T>> void addToLabel(Img<T> img, int addVal)
+    {
+        final Cursor<T> cursor = img.cursor();
+        T it;
+
+        while (cursor.hasNext())
         {
-            this.idx = idx;
-            this.img = img;
-        }
-
-        public Img<IntType> call() throws Exception
-        {
-            final Cursor<IntType> cursor = img.cursor();
-            int addVal = 0;
-            IntType it;
-
-            for (int i = 0; i < idx; ++i)
+            cursor.fwd();
+            it = cursor.get();
+            if (it.getRealFloat() > 0)
             {
-                addVal += maxVal[i];
+                it.setReal(it.getRealFloat() + addVal);
             }
-
-            IJ.log("Index " + idx + " maxVal(i-1): " + maxVal[idx - 1] + ", addVal: " + addVal);
-
-            while (cursor.hasNext())
-            {
-                cursor.fwd();
-                it = cursor.get();
-                if (it.get() > 0)
-                {
-                    it.set(it.get() + addVal);
-                }
-            }
-
-            return img;
         }
     }
+
 
     private long pTime;
     private final ExecutorService service;
@@ -137,12 +108,12 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
     private long[] maxVal;
     private ArrayList<Img<IntType>> ccImgs;
 
-    public SerialSectionConnectedComponents(ImagePlus imp)
+    public ProbImageToConnectedComponents(ImagePlus imp)
     {
         this(imp, Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
     }
 
-    public SerialSectionConnectedComponents(ImagePlus imp, ExecutorService service)
+    public ProbImageToConnectedComponents(ImagePlus imp, ExecutorService service)
     {
         this.service = service;
         this.imp = imp;
@@ -259,7 +230,8 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
         return pTime;
     }
 
-    public <T extends RealType> void thresholdImg(Img<T> fimg, Img<BitType> bimg)
+    public static <T extends RealType> void thresholdImg(Img<T> fimg, Img<BitType> bimg,
+                                                         float threshold, boolean gt)
     {
         Cursor<BitType> target = bimg.localizingCursor();
         RandomAccess<T> source = fimg.randomAccess();
@@ -273,7 +245,7 @@ public class SerialSectionConnectedComponents implements Algorithm, Benchmark
             target.fwd();
             source.setPosition(target);
             test = source.get().getRealDouble() / max >= threshold;
-            target.get().set(test == thresholdGT);
+            target.get().set(test == gt);
         }
     }
 }
