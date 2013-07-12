@@ -1,24 +1,19 @@
 package edu.utexas.clm.synapses.segpipeline.process;
 
-import ij.ImagePlus;
-import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccess;
 import net.imglib2.algorithm.Algorithm;
 import net.imglib2.algorithm.Benchmark;
 import net.imglib2.algorithm.labeling.AllConnectedComponents;
-import net.imglib2.img.ImagePlusAdapter;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.labeling.NativeImgLabeling;
 import net.imglib2.ops.operation.UnaryOperation;
 import net.imglib2.ops.operation.randomaccessibleinterval.unary.morph.ErodeGray;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.real.FloatType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
