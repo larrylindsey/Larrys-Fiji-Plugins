@@ -1,22 +1,27 @@
 package edu.utexas.clm.synapses.segpipeline.process;
 
+import edu.utexas.clm.archipelago.data.Duplex;
+import edu.utexas.clm.archipelago.data.FileChunk;
+import edu.utexas.clm.synapses.segpipeline.PipelineUtils;
+import edu.utexas.clm.synapses.segpipeline.process.callables.ProbImageToCCCallable;
+import edu.utexas.clm.synapses.segpipeline.process.callables.ReindexLabelCallable;
 import ij.process.ImageProcessor;
 import net.imglib2.Cursor;
-import net.imglib2.RandomAccess;
-import net.imglib2.algorithm.Algorithm;
-import net.imglib2.algorithm.Benchmark;
 import net.imglib2.algorithm.labeling.AllConnectedComponents;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.labeling.NativeImgLabeling;
 import net.imglib2.ops.operation.UnaryOperation;
-import net.imglib2.ops.operation.randomaccessibleinterval.unary.morph.ErodeGray;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 
 /**
@@ -25,7 +30,8 @@ import java.util.Iterator;
  * to re-index the label image.
  * @param <A>
  */
-public class ProbImageToConnectedComponents<A extends RealType<A>> implements Algorithm, Benchmark
+public class ProbImageToConnectedComponents<A extends RealType<A>>
+
 {
     private static class IntTypeNamer implements Iterator<IntType>
     {
@@ -58,32 +64,21 @@ public class ProbImageToConnectedComponents<A extends RealType<A>> implements Al
     }
 
     private long pTime;
-    private String errorMsg;
-    private final Img<A> img;
     private float threshold;
     private boolean thresholdGT;
-    private final UnaryOperation<Img<A>, Img<A>> preProcess;
-    private long[] dim;
-    private Img<IntType> ccLabel;
-    private int maxVal;
+    private final UnaryOperation<Img<BitType>, Img<BitType>> postProcess;
 
-    public ProbImageToConnectedComponents(final Img<A> img)
+    public ProbImageToConnectedComponents()
     {
-        this(img, new IdentityOperation<Img<A>>());
+        this(new IdentityOperation<Img<BitType>>());
     }
 
-    public ProbImageToConnectedComponents(final Img<A> img,
-                                          final UnaryOperation<Img<A>, Img<A>> preProcess)
+    public ProbImageToConnectedComponents(
+            final UnaryOperation<Img<BitType>,Img<BitType>> postProcess)
     {
-        this.img = img;
-        this.preProcess = preProcess;
-        errorMsg = "";
+        this.postProcess = postProcess;
         threshold = 0.5f;
         thresholdGT = true;
-        dim = new long[img.numDimensions()];
-        img.dimensions(dim);
-        ccLabel = null;
-        maxVal = -1;
     }
 
     public void setThreshold(final float t, final boolean gt)
@@ -92,87 +87,22 @@ public class ProbImageToConnectedComponents<A extends RealType<A>> implements Al
         thresholdGT = gt;
     }
 
-    public boolean checkInput()
+    public int compute(Img<A> img, Img<IntType> label)
     {
-        return true;
-    }
+        final Threshold<A> thOperator = new Threshold<A>(
+                Threshold.fractionOfMax(img, threshold), thresholdGT);
+        final long[] dim = PipelineUtils.getDim(img);
+        final Img<BitType> imgT;
+        final Img<BitType> imgTPost;
+        final int maxVal;
 
+        imgT = thOperator.compute(img, new ArrayImgFactory<BitType>().create(dim, new BitType()));
 
+        imgTPost = postProcess.compute(imgT, imgT.copy());
 
-    /*public ArrayList<Future<Img<IntType>>> connectedComponentsFutures()
-    {
-        final ImageStack is = imp.getImageStack();
-        maxVal = new long[is.getSize()];
-        final ArrayList<Future<Img<IntType>>> ccFutures =
-                new ArrayList<Future<Img<IntType>>>(is.getSize());
+        maxVal = connectedComponents(imgTPost, label);
 
-
-        if (is.getSize() > 1)
-        {
-            for (int i = 1; i <= is.getSize(); ++i)
-            {
-                final String nid = String.format("%05d", i);
-                final ImagePlus impSlice = new ImagePlus(imp.getTitle() + " " + nid,
-                        is.getProcessor(i));
-                ccFutures.add(service.submit(new ConnectedComponentsCallable(impSlice, i)));
-            }
-        }
-        else
-        {
-            ccFutures.add(service.submit(new ConnectedComponentsCallable(imp, 1)));
-        }
-
-        return ccFutures;
-    } */
-
-    public boolean process()
-    {
-        final long sTime = System.currentTimeMillis();
-        final Img<BitType> imgT = new ArrayImgFactory<BitType>().create(dim, new BitType());
-        ccLabel = new ArrayImgFactory<IntType>().create(dim, new IntType());
-
-        thresholdImg(preProcess.compute(img, img.copy()), imgT, threshold, thresholdGT);
-        maxVal = connectedComponents(imgT, ccLabel);
-
-        pTime = System.currentTimeMillis() - sTime;
-        return true;
-    }
-    
-    public String getErrorMessage() {
-        return errorMsg;
-    }
-
-    public long getProcessingTime() {
-        return pTime;
-    }
-
-    public int getMaxVal()
-    {
         return maxVal;
-    }
-
-    public Img<IntType> getLabel()
-    {
-        return ccLabel;
-    }
-
-    public static <T extends RealType> void thresholdImg(Img<T> fimg, Img<BitType> bimg,
-                                                         float threshold, boolean gt)
-    {
-        Cursor<BitType> target = bimg.localizingCursor();
-        RandomAccess<T> source = fimg.randomAccess();
-        T t = fimg.firstElement();
-        double max = t.getMaxValue();
-        boolean test;
-
-        while ( target.hasNext())
-        {
-
-            target.fwd();
-            source.setPosition(target);
-            test = source.get().getRealDouble() / max >= threshold;
-            target.get().set(test == gt);
-        }
     }
 
     public static int connectedComponents(final Img<BitType> img, final Img<IntType> label)
@@ -222,39 +152,38 @@ public class ProbImageToConnectedComponents<A extends RealType<A>> implements Al
         }
     }
 
-    private static long[][] diskStrel(final int r)
+    public static ArrayList<FileChunk> batchPITCC(final ArrayList<File> imageFiles,
+                                                  final ExecutorService es,
+                                                  final float th,
+                                                  final boolean gt,
+                                                  final int strSz)
+            throws ExecutionException, InterruptedException
     {
-        long[][] strel;
-        final ArrayList<long[]> v = new ArrayList<long[]>();
-        final int r2 = r*r;
+        final ArrayList<Future<Duplex<Integer, FileChunk>>> ccResults =
+                new ArrayList<Future<Duplex<Integer, FileChunk>>>();
+        final ArrayList<Future<FileChunk>> riResults =
+                new ArrayList<Future<FileChunk>>();
+        final ArrayList<FileChunk> files = new ArrayList<FileChunk>();
+        int reindexValue = 0;
 
-        for (int i = 0; i <= r; ++i)
+        for (File f : imageFiles)
         {
-            for (int j = 0; j <= r; ++j)
-            {
-                if (i*i + j*j <= r2)
-                {
-                    v.add(new long[]{i,j});
-                    v.add(new long[]{-i,j});
-                    v.add(new long[]{i,-j});
-                    v.add(new long[]{-i,-j});
-                }
-            }
+            ccResults.add(es.submit(new ProbImageToCCCallable(new FileChunk(f.getAbsolutePath()),
+                    strSz, th, gt)));
         }
 
-        strel = new long[v.size()][];
-
-        for (int i = 0; i < v.size(); ++i)
+        for (Future<Duplex<Integer, FileChunk>> future : ccResults)
         {
-            strel[i] = v.get(i);
+            final Duplex<Integer, FileChunk> dup = future.get();
+            riResults.add(es.submit(new ReindexLabelCallable(dup.b, reindexValue)));
+            reindexValue += dup.a - 1;
         }
 
-        return strel;
-    }
+        for (Future<FileChunk> future : riResults)
+        {
+            files.add(future.get());
+        }
 
-    public static <T extends RealType<T>> ErodeGray<T, Img<T>> erodeDisk(int r, T type)
-    {
-        return new ErodeGray<T, Img<T>>(diskStrel(r));
+        return files;
     }
-
 }

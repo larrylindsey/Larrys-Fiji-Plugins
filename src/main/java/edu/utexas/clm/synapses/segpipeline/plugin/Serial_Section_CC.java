@@ -1,59 +1,83 @@
 package edu.utexas.clm.synapses.segpipeline.plugin;
 
+import edu.utexas.archipelago.ArchipelagoUtils;
+import edu.utexas.clm.archipelago.Cluster;
+import edu.utexas.clm.archipelago.data.FileChunk;
 import edu.utexas.clm.synapses.segpipeline.process.ProbImageToConnectedComponents;
 import ij.IJ;
 import ij.ImagePlus;
+import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
-import ij.process.FloatProcessor;
-import net.imglib2.img.ImagePlusAdapter;
-import net.imglib2.img.Img;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.type.numeric.RealType;
+
+import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 
 
 public class Serial_Section_CC implements PlugIn
 
 {
+
     public void run(String s) {
-        Img<? extends RealType> img;
-        ImagePlus imp = IJ.getImage();
 
-        switch(imp.getType())
+        final ImagePlus imp = IJ.getImage();
+        final ArrayList<File> imageFiles = new ArrayList<File>();
+        final ArrayList<FileChunk> files;
+        final ExecutorService es;
+        final GenericDialog gd = new GenericDialog("Serial Section Connected Components");
+        final boolean gt;
+        final float th;
+        final int strelSz;
+
+        gd.addRadioButtonGroup("", new String[]{"Greater Than", "Less Than"}, 2, 1, "Greater Than");
+        gd.addNumericField("Threshold [0, 1]", .5, 2);
+        gd.addNumericField("Open by (px)", 2, 0);
+        gd.setMinimumSize(new Dimension(240, 360));
+        gd.setSize(new Dimension(240, 360));
+        gd.show();
+
+        if (gd.wasCanceled())
         {
-            case ImagePlus.GRAY8:
-                img = ImagePlusAdapter.wrapByte(imp);
-                break;
-            case ImagePlus.GRAY16:
-                img = ImagePlusAdapter.wrapShort(imp);
-                break;
-            case ImagePlus.GRAY32:
-                img = ImagePlusAdapter.wrapFloat(imp);
-                break;
-            default:
-                IJ.error("Must be a grayscale image");
-                return;
+            return;
         }
 
-        @SuppressWarnings("unchecked")
-        final ProbImageToConnectedComponents sscc = new ProbImageToConnectedComponents(img,
-                ProbImageToConnectedComponents.erodeDisk(1, img.firstElement()));
-        @SuppressWarnings("unchecked")
-        final ProbImageToConnectedComponents sscc2 = new ProbImageToConnectedComponents(img);
+        gt = gd.getNextRadioButton().equals("Greater Than");
+        th = (float)gd.getNextNumber();
+        strelSz = (int)gd.getNextNumber();
 
-        if (sscc.checkInput() && sscc.process())
+
+        if (!Cluster.activeCluster())
         {
-            ImageJFunctions.show(sscc.getLabel());
+            Cluster.getClusterWithUI();
         }
 
-        if (sscc2.checkInput() && sscc2.process())
+        Cluster.getCluster().waitUntilReady();
+        es = Cluster.getCluster().getService(1);
+
+        try
         {
-            ImageJFunctions.show(sscc2.getLabel());
+            ArchipelagoUtils.getFileList(imageFiles, imp);
+            files = ProbImageToConnectedComponents.batchPITCC(imageFiles, es, th, gt, strelSz);
+            new ImagePlus(imp.getTitle() + " Connected Components",
+                    ArchipelagoUtils.makeVirtualStack(
+                            files, imp.getWidth(), imp.getHeight())).show();
         }
-
-        ProbImageToConnectedComponents.addToLabel(imp.getProcessor(), 100);
-
-        IJ.log("done");
-        imp.show();
-
+        catch (IOException ioe)
+        {
+            throw new RuntimeException(ioe);
+        }
+        catch (ExecutionException ee)
+        {
+            throw new RuntimeException(ee);
+        }
+        catch (InterruptedException ie)
+        {
+            throw new RuntimeException(ie);
+        }
     }
+
+
 }
