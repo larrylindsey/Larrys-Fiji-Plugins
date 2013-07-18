@@ -19,7 +19,7 @@ public class LabelDilate implements LabelOperation
     {
         TreeSet<Integer> dilatedBorder = new TreeSet<Integer>();
         final int height = input.getHeight(), width = input.getWidth();
-        final int[] linearStrel = convertStrel(input.getWidth(), input.getHeight());
+        final int[] linearStrel = convertStrel(input.getWidth());
         final int[] dilatedIdx;
         int t = 0;
 
@@ -41,7 +41,7 @@ public class LabelDilate implements LabelOperation
             dilatedIdx[t++] = i;
         }
 
-        return input.union(new SparseLabel(width, height, dilatedIdx));
+        return input.union(new SparseLabel(input.getValue(), width, height, dilatedIdx));
 
     }
 
@@ -52,7 +52,7 @@ public class LabelDilate implements LabelOperation
         return xo > 0 && xo < w && yo > 0 && yo < h;
     }
 
-    private int[] convertStrel(final int width, final int height)
+    private int[] convertStrel(final int width)
     {
         final int[] linearStrel = new int[strel.length];
         for (int i = 0; i < strel.length; ++i)

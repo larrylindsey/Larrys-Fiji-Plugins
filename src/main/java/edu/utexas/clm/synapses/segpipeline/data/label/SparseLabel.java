@@ -10,23 +10,28 @@ public class SparseLabel
 {
     private int[] idx;
     private int width, height;
+    private int val;
 
-    public SparseLabel(final int width, final int height)
+    public SparseLabel(final int val, final int width, final int height)
     {
-        this(width, height, new int[0]);
+        this(val, width, height, new int[0]);
     }
 
-    public SparseLabel(final int width, final int height, final int[] idx)
+    public SparseLabel(final int val, final int width, final int height, final int[] idx)
     {
         // idx *must* be sorted, ascending. This is not checked, and will break things.
+        this.val = val;
         this.width = width;
         this.height = height;
         this.idx = idx.clone();
     }
 
-    public SparseLabel copy()
+    public SparseLabel(final SparseLabel sl)
     {
-        return new SparseLabel(width, height, idx.clone());
+        val = sl.val;
+        width = sl.width;
+        height = sl.height;
+        idx = sl.idx.clone();
     }
 
     public int area()
@@ -39,6 +44,16 @@ public class SparseLabel
         return idx;
     }
 
+    public int getValue()
+    {
+        return val;
+    }
+
+    public void setValue(final int val)
+    {
+        this.val = val;
+    }
+
     public int getWidth()
     {
         return width;
@@ -48,6 +63,7 @@ public class SparseLabel
     {
         return height;
     }
+
     public SparseLabel intersection(final SparseLabel sl)
     {
         final int[] tempIdx = new int[idx.length];
@@ -79,7 +95,7 @@ public class SparseLabel
             isectIdx[l] = tempIdx[l];
         }
 
-        return new SparseLabel(width, height, isectIdx);
+        return new SparseLabel(val, width, height, isectIdx);
     }
 
     public SparseLabel union(final SparseLabel sl)
@@ -117,7 +133,7 @@ public class SparseLabel
             unionIdx[l] = tempIdx[l];
         }
 
-        return new SparseLabel(width, height, unionIdx);
+        return new SparseLabel(val, width, height, unionIdx);
     }
 
     private boolean isBoundary(int i)
@@ -144,9 +160,6 @@ public class SparseLabel
                 (Arrays.binarySearch(idx, i - width, i, idx[i] - width) > 0) ||
                 (Arrays.binarySearch(idx, i + 1, i + width + 1, idx[i] + width) > 0));
     }
-
-
-
 
 
     /**
@@ -187,6 +200,7 @@ public class SparseLabel
             }
         };
     }
+
 
    /* private int[] convertIdx(SparseLabel sl)
     {
