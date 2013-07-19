@@ -6,7 +6,11 @@ import net.imglib2.Cursor;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+
 
 /**
  *
@@ -18,46 +22,16 @@ public class SparseLabelFactory
 
     private class LabelBuilder
     {
-/*
-        private int[] buffer;
-        private int[] idx;
-        private int i;
-*/
         private boolean needSort = false;
         private ArrayList<Integer> buffer;
 
         public LabelBuilder()
         {
-/*
-            buffer = new int[BUFFER_SIZE];
-            idx = new int[0];
-            i = 0;
-*/
             buffer = new ArrayList<Integer>();
         }
 
         public void append(final int value)
         {
-            /*if (i >= BUFFER_SIZE)
-            {
-                int[] newIdx = new int[idx.length + BUFFER_SIZE];
-
-                for (int j = 0; j < idx.length; ++j)
-                {
-                    newIdx[j] = idx[j];
-                }
-
-                for (int j = 0; j < BUFFER_SIZE; ++j)
-                {
-                    newIdx[j + idx.length] = buffer[j];
-                }
-
-                i = 0;
-                idx = newIdx;
-            }
-
-            buffer[i] = value;
-            ++i;*/
             if (!buffer.isEmpty())
             {
                 needSort |= value < buffer.get(buffer.size() - 1);
@@ -67,23 +41,6 @@ public class SparseLabelFactory
 
         public SparseLabel makeSparseLabel(final int l)
         {
-            /*int[] slIdx = new int[idx.length + i];
-            boolean needSort = false;
-
-            slIdx[0] = idx[0];
-            for (int j = 1; j < idx.length; ++j)
-            {
-                slIdx[j] = idx[j];
-                needSort |= idx[j] < idx[j - 1];
-            }
-
-            for (int j = 0; j < i; ++j)
-            {
-                int k = j + idx.length;
-                slIdx[k] = buffer[j];
-                needSort |= slIdx[k] < slIdx[k - 1];
-            }*/
-
             if (needSort)
             {
                 Collections.sort(buffer);
@@ -108,6 +65,16 @@ public class SparseLabelFactory
         this.height = height;
     }
 
+    public int getWidth()
+    {
+        return width;
+    }
+
+    public int getHeight()
+    {
+        return height;
+    }
+
     public boolean makeLabels(ImagePlus imp, Collection<SparseLabel> labelsOut)
     {
         if (imp.getWidth() != width || imp.getHeight() != height)
@@ -121,8 +88,6 @@ public class SparseLabelFactory
             final ArrayList<Integer> keys;
             int linearLoc, tVal, currLabel = 0;
             final ImageProcessor ip = imp.getProcessor();
-
-            System.out.println("Populating label builders....");
 
             for (int y = 0; y < height; ++y)
             {
@@ -203,6 +168,20 @@ public class SparseLabelFactory
             return true;
         }
     }
+
+
+    public SparseLabel makeLabel(final int label, final Iterable<Integer> vals)
+    {
+        LabelBuilder lb = new LabelBuilder();
+        for (int i : vals)
+        {
+            lb.append(i);
+        }
+
+        return lb.makeSparseLabel(label);
+    }
+
+
 
     private LabelBuilder getOrCreate(final HashMap<Integer, LabelBuilder> map, final int val)
     {

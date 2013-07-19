@@ -155,10 +155,10 @@ public class SparseLabel
          Case 4: South
            Search idx in (i, i + width] for idx[i] + width
          */
-        return !((i > 0 && idx[i] % width > 0 && idx[i - 1] == idx[i] - 1) ||
-                (i + 1 < idx.length && idx[i] + 1 % width > 0 && idx[i + 1] == idx[i] + 1) ||
-                (Arrays.binarySearch(idx, i - width, i, idx[i] - width) > 0) ||
-                (Arrays.binarySearch(idx, i + 1, i + width + 1, idx[i] + width) > 0));
+        return (!(i > 0 && idx[i] % width > 0 && idx[i - 1] == idx[i] - 1) ||
+                !(i + 1 < idx.length && idx[i] + 1 % width > 0 && idx[i + 1] == idx[i] + 1) ||
+                !(Arrays.binarySearch(idx, Math.max(i - width, 0), i, idx[i] - width) > 0) ||
+                !(Arrays.binarySearch(idx, i + 1, Math.min(i + width + 1, idx.length - 1), idx[i] + width) > 0));
     }
 
 
@@ -189,7 +189,7 @@ public class SparseLabel
 
                     public Integer next()
                     {
-                        return idx[i];
+                        return idx[i++];
                     }
 
                     public void remove()
