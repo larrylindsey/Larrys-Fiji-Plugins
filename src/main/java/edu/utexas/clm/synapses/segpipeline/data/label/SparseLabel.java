@@ -1,5 +1,7 @@
 package edu.utexas.clm.synapses.segpipeline.data.label;
 
+import weka.core.pmml.SparseArray;
+
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -67,7 +69,7 @@ public class SparseLabel
     public SparseLabel intersection(final SparseLabel sl)
     {
         final int[] tempIdx = new int[idx.length];
-        final int[] isectIdx;
+//        final int[] isectIdx;
 
         int i = 0, j = 0, k = 0;
         while (i < idx.length && j < sl.idx.length)
@@ -89,19 +91,57 @@ public class SparseLabel
             }
         }
 
-        isectIdx = new int[k];
-        for (int l = 0; l < k; ++l)
+//        isectIdx = new int[k];
+//        for (int l = 0; l < k; ++l)
+//        {
+//            isectIdx[l] = tempIdx[l];
+//        }
+
+        return new SparseLabel(val, width, height, trimArray(tempIdx, k));
+    }
+
+    public SparseLabel subtract(final SparseLabel sl)
+    {
+        final int[] tempIdx = new int[idx.length];
+//        final int[] subtractIdx;
+
+        int i = 0, j = 0, k = 0;
+        while (i < idx.length && j < sl.idx.length)
         {
-            isectIdx[l] = tempIdx[l];
+            if (idx[i] == sl.idx[j])
+            {
+                ++i;
+                ++j;
+            }
+            else if (idx[i] < sl.idx[j])
+            {
+                tempIdx[k] = idx[i];
+                ++k;
+                ++i;
+            }
+            else
+            {
+                while (j < sl.idx.length && idx[i] > sl.idx[j])
+                {
+                    ++j;
+                }
+            }
         }
 
-        return new SparseLabel(val, width, height, isectIdx);
+        while (i < idx.length)
+        {
+            tempIdx[k] = idx[i];
+            ++i;
+            ++k;
+        }
+
+        return new SparseLabel(val, width, height, trimArray(tempIdx, k));
     }
 
     public SparseLabel union(final SparseLabel sl)
     {
         final int[] tempIdx = new int[idx.length + sl.idx.length];
-        final int[] unionIdx;
+//        final int[] unionIdx;
 
         int i = 0, j = 0, k = 0;
         while (i < idx.length && j < sl.idx.length)
@@ -127,13 +167,23 @@ public class SparseLabel
             }
         }
 
-        unionIdx = new int[k];
-        for (int l = 0; l < k; ++l)
-        {
-            unionIdx[l] = tempIdx[l];
-        }
+//        unionIdx = new int[k];
+//        for (int l = 0; l < k; ++l)
+//        {
+//            unionIdx[l] = tempIdx[l];
+//        }
 
-        return new SparseLabel(val, width, height, unionIdx);
+        return new SparseLabel(val, width, height, trimArray(tempIdx, k));
+    }
+
+    private int[] trimArray(final int[] array, final int l)
+    {
+        final int[] trimmed = new int[l];
+        for (int i = 0; i < l; ++i)
+        {
+            trimmed[i] = array[i];
+        }
+        return trimmed;
     }
 
     private boolean isBoundary(int i)
