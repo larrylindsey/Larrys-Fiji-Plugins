@@ -1,6 +1,10 @@
 package edu.utexas.clm.synapses.segpipeline.plugin;
 
 import edu.utexas.clm.synapses.segpipeline.data.label.*;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.AbstractLabelMorph;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelClose;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelDilate;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOpen;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.PlugIn;

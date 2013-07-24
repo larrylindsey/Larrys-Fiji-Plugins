@@ -1,4 +1,6 @@
-package edu.utexas.clm.synapses.segpipeline.data.label;
+package edu.utexas.clm.synapses.segpipeline.data.label.operations;
+
+import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
 /**
  *
