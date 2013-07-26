@@ -39,21 +39,28 @@ public class SparseLabelFactory
             buffer.add(value);
         }
 
-        public SparseLabel makeSparseLabel(final int l)
+        public SparseLabel makeSparseLabel(final int l, final int index)
         {
+            int[] slIdx = new int[buffer.size()];
+            SparseLabel sl;
+
             if (needSort)
             {
                 Collections.sort(buffer);
             }
 
-            int[] slIdx = new int[buffer.size()];
+
 
             for (int i = 0; i < buffer.size(); ++i)
             {
                 slIdx[i] = buffer.get(i);
             }
 
-            return new SparseLabel(l, width, height, slIdx);
+
+
+            sl = new SparseLabel(l, width, height, slIdx);
+            sl.setIndex(index);
+            return sl;
         }
     }
 
@@ -75,7 +82,8 @@ public class SparseLabelFactory
         return height;
     }
 
-    public boolean makeLabels(ImagePlus imp, Collection<SparseLabel> labelsOut)
+    public boolean makeLabels(final ImagePlus imp, final int index,
+                              final Collection<SparseLabel> labelsOut)
     {
         if (imp.getWidth() != width || imp.getHeight() != height)
         {
@@ -118,15 +126,16 @@ public class SparseLabelFactory
 
             for (Integer key : keys)
             {
-                labelsOut.add(builderMap.get(key).makeSparseLabel(key));
+                labelsOut.add(builderMap.get(key).makeSparseLabel(key, index));
             }
 
             return true;
         }
     }
 
-    public <T extends IntegerType<T>> boolean makeLabels(Img<T> img,
-                                                         Collection<SparseLabel> labelsOut)
+    public <T extends IntegerType<T>> boolean makeLabels(final Img<T> img,
+                                                         final int index,
+                                                         final Collection<SparseLabel> labelsOut)
     {
         if (img.dimension(0) != width || img.dimension(1) != height)
         {
@@ -162,7 +171,7 @@ public class SparseLabelFactory
 
             for (Integer key : keys)
             {
-                labelsOut.add(builderMap.get(key).makeSparseLabel(key));
+                labelsOut.add(builderMap.get(key).makeSparseLabel(key, index));
             }
 
             return true;
@@ -170,7 +179,7 @@ public class SparseLabelFactory
     }
 
 
-    public SparseLabel makeLabel(final int label, final Iterable<Integer> vals)
+    public SparseLabel makeLabel(final int label, final Iterable<Integer> vals, final int index)
     {
         LabelBuilder lb = new LabelBuilder();
         for (int i : vals)
@@ -178,7 +187,7 @@ public class SparseLabelFactory
             lb.append(i);
         }
 
-        return lb.makeSparseLabel(label);
+        return lb.makeSparseLabel(label, index);
     }
 
 

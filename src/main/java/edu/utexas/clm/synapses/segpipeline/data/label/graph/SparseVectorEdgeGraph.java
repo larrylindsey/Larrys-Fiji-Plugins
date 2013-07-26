@@ -11,33 +11,35 @@ import java.util.*;
 public class SparseVectorEdgeGraph implements Serializable
 {
 
-    final int vectorSize;
-    final TreeMap<Duplex<Integer, Integer>, float[]> edges;
+    private final int vectorSize;
+    private final TreeMap<Duplex<Integer, Integer>, float[]> edges;
+    private final float[] zeroVector;
 
 
     public SparseVectorEdgeGraph(final int vectorSize)
     {
         this.vectorSize = vectorSize;
         edges = new TreeMap<Duplex<Integer, Integer>, float[]>(duplexComparator());
+        zeroVector = new float[this.vectorSize];
     }
 
 
-    public void setEdgeValue(final int from, final int to, final int d, final float value)
-    {
-        getOrCreate(from, to)[d] = value;
-    }
+//    public void setEdgeValue(final int from, final int to, final int d, final float value)
+//    {
+//        getOrCreateEdgeValues(from, to)[d] = value;
+//    }
 
     public int getVectorSize()
     {
         return vectorSize;
     }
 
-    private float[] getOrCreate(final int from, final int to)
+    public float[] getOrCreateEdgeValues(final int from, final int to)
     {
-        return getOrCreate(new Duplex<Integer, Integer>(from, to));
+        return getOrCreateEdgeValues(new Duplex<Integer, Integer>(from, to));
     }
 
-    private float[] getOrCreate(final Duplex<Integer, Integer> key)
+    public float[] getOrCreateEdgeValues(final Duplex<Integer, Integer> key)
     {
         float[] value = edges.get(key);
 
@@ -86,8 +88,8 @@ public class SparseVectorEdgeGraph implements Serializable
 
         for (Duplex<Integer, Integer> dup : sveg.getEdges())
         {
-            final float[] ourEdgeVal = getOrCreate(dup);
-            final float[] theirEdgeVal = sveg.getEdgeValue(dup);
+            final float[] ourEdgeVal = getOrCreateEdgeValues(dup);
+            final float[] theirEdgeVal = sveg.getEdgeValues(dup);
 
             for (int i = 0; i < vectorSize; ++i)
             {
@@ -104,9 +106,15 @@ public class SparseVectorEdgeGraph implements Serializable
         return edges.keySet();
     }
 
-    public float[] getEdgeValue(final Duplex<Integer, Integer> key)
+    public float[] getEdgeValues(final Duplex<Integer, Integer> key)
     {
-        return edges.get(key);
+        float[] values = edges.get(key);
+        return values == null ? zeroVector.clone() : values;
+    }
+
+    public float[] getEdgeValues(final int a, final int b)
+    {
+        return getEdgeValues(new Duplex<Integer, Integer>(a, b));
     }
 
 

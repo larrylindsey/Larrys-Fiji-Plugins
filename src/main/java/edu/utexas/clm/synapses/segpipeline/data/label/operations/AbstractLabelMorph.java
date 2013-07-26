@@ -37,8 +37,7 @@ public abstract class AbstractLabelMorph implements LabelOperation
             dilatedIdx[t++] = i;
         }
 
-        //return new SparseLabel(input.getValue(), width, height, dilatedIdx);
-        return new SparseLabel(input.getValue(), width, height, dilatedIdx);
+        return new SparseLabel(input, dilatedIdx);
     }
 
     private boolean check(final int i, final int j, final int w, final int h, final int[][] strel)

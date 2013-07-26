@@ -3,6 +3,7 @@ package edu.utexas.clm.synapses.segpipeline.data.label;
 import weka.core.pmml.SparseArray;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 
 /**
@@ -13,6 +14,8 @@ public class SparseLabel
     private int[] idx;
     private int width, height;
     private int val;
+    private int index;
+    private int minx, miny, maxx, maxy;
 
     public SparseLabel(final int val, final int width, final int height)
     {
@@ -26,14 +29,31 @@ public class SparseLabel
         this.width = width;
         this.height = height;
         this.idx = idx.clone();
+        this.index = 1;
     }
 
     public SparseLabel(final SparseLabel sl)
     {
+        this(sl, sl.idx.clone());
+    }
+
+    public SparseLabel(final SparseLabel sl, final int[] idx)
+    {
         val = sl.val;
         width = sl.width;
         height = sl.height;
-        idx = sl.idx.clone();
+        index = sl.index;
+        this.idx = idx;
+    }
+
+    public void setIndex(int index)
+    {
+        this.index = index;
+    }
+
+    public int getIndex()
+    {
+        return index;
     }
 
     public int area()
@@ -66,10 +86,71 @@ public class SparseLabel
         return height;
     }
 
+    private void calculateBoundingBox()
+    {
+        int minx = width, maxx = 0, miny = height, maxy = 0;
+        int x, y;
+        for (int i : idx)
+        {
+            x = i % width;
+            y = i / width;
+            if (x < minx)
+            {
+                minx = x;
+            }
+            if (y < miny)
+            {
+                miny = y;
+            }
+            if (x > maxx)
+            {
+                maxx = x;
+            }
+            if (y > maxy)
+            {
+                maxy = y;
+            }
+        }
+
+        this.minx = minx;
+        this.miny = miny;
+        this.maxx = maxx;
+        this.maxy = maxy;
+    }
+
+    public boolean isBoundingBoxOverlap(final SparseLabel sl)
+    {
+        return maxx >= sl.minx && minx <= sl.maxx && maxy >= sl.miny && miny <= sl.maxy;
+    }
+
+    public boolean intersect(final SparseLabel sl)
+    {
+
+        if (isBoundingBoxOverlap(sl)) //TODO: is this faster?
+        {
+            int i = 0, j = 0;
+            while (i < idx.length && j < sl.idx.length)
+            {
+                if (idx[i] == sl.idx[j])
+                {
+                    return true;
+                }
+                else if (idx[i] < sl.idx[j])
+                {
+                    ++i;
+                }
+                else
+                {
+                    ++j;
+                }
+            }
+        }
+        return false;
+    }
+
     public SparseLabel intersection(final SparseLabel sl)
     {
         final int[] tempIdx = new int[idx.length];
-//        final int[] isectIdx;
 
         int i = 0, j = 0, k = 0;
         while (i < idx.length && j < sl.idx.length)
@@ -91,19 +172,12 @@ public class SparseLabel
             }
         }
 
-//        isectIdx = new int[k];
-//        for (int l = 0; l < k; ++l)
-//        {
-//            isectIdx[l] = tempIdx[l];
-//        }
-
-        return new SparseLabel(val, width, height, trimArray(tempIdx, k));
+        return new SparseLabel(this, trimArray(tempIdx, k));
     }
 
     public SparseLabel subtract(final SparseLabel sl)
     {
         final int[] tempIdx = new int[idx.length];
-//        final int[] subtractIdx;
 
         int i = 0, j = 0, k = 0;
         while (i < idx.length && j < sl.idx.length)
@@ -135,13 +209,12 @@ public class SparseLabel
             ++k;
         }
 
-        return new SparseLabel(val, width, height, trimArray(tempIdx, k));
+        return new SparseLabel(this, trimArray(tempIdx, k));
     }
 
     public SparseLabel union(final SparseLabel sl)
     {
         final int[] tempIdx = new int[idx.length + sl.idx.length];
-//        final int[] unionIdx;
 
         int i = 0, j = 0, k = 0;
         while (i < idx.length && j < sl.idx.length)
@@ -167,13 +240,7 @@ public class SparseLabel
             }
         }
 
-//        unionIdx = new int[k];
-//        for (int l = 0; l < k; ++l)
-//        {
-//            unionIdx[l] = tempIdx[l];
-//        }
-
-        return new SparseLabel(val, width, height, trimArray(tempIdx, k));
+        return new SparseLabel(this, trimArray(tempIdx, k));
     }
 
     private int[] trimArray(final int[] array, final int l)
@@ -251,6 +318,28 @@ public class SparseLabel
         };
     }
 
+    public static Comparator<SparseLabel> valueComparator()
+    {
+        return new Comparator<SparseLabel>()
+        {
+            public int compare(SparseLabel o1, SparseLabel o2)
+            {
+                return o1.getValue() - o2.getValue();
+            }
+        };
+    }
+
+    /**
+     * Returns true if Object o is a SparseLabel with the same value as this one. This function
+     * assumes that only one SparseLabel exists with this given value, or that another SparseLabel
+     * with this value is equivalent.
+     * @param o an Object that may or may not be equal to this SparseLabel.
+     * @return true if Object o is a SparseLabel with the same value as this one.
+     */
+    public boolean equals(Object o)
+    {
+        return (o instanceof SparseLabel) && ((SparseLabel)o).val == val;
+    }
 
    /* private int[] convertIdx(SparseLabel sl)
     {
