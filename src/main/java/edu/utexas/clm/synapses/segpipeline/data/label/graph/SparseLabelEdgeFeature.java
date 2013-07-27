@@ -9,7 +9,7 @@ import java.io.Serializable;
 /**
  *
  */
-public abstract class SparseLabelFeature implements Serializable
+public abstract class SparseLabelEdgeFeature implements Serializable
 {
 
     private boolean enabled = true;
@@ -22,27 +22,27 @@ public abstract class SparseLabelFeature implements Serializable
     public abstract int numDimensions();
 
     /**
-     * Calculate the feature value between two SparseLabels, placing the result in an array
-     * of floating-point values, beginning at the offset value.
+     * Optionally calculate edge value between two nodes, placing it in the array returned by
+     * factory.getVector(sl0, sl1), beginning at the specified offset.
+     * @param factory the SVEGfactory to populate
      * @param sl0 the first SparseLabel node
      * @param sl1 the second SparseLabel node
-     * @param vector the feature vector
-     * @param offset the offset into the feature vector at which this SparseLabelFeature should
+     * @param offset the offset into the feature vector at which this SparseLabelEdgeFeature should
      *               begin recording feature values.
      */
-    public abstract void extractFeature(final SparseLabel sl0, final SparseLabel sl1,
-                               final float[] vector, final int offset);
+    public abstract void extractFeature(final SVEGFactory factory, final SparseLabel sl0,
+                                        final SparseLabel sl1, final int offset);
 
 
     /**
      * Return a collection of SparseLabels that could share an edge with the SparseLabel sl. This
      * is intended to be a first-pass rejection step, to reduce computational overhead of calling
      * extractFeature. Many Features may simply return all.
+     * @param factory the SVEGfactory to populate
      * @param sl the SparseLabel to test
-     * @param all all SparseLabel nodes for a given graph
      * @return a Collection containing all SparseLabels that could have a relationship with sl.
      */
-    public abstract Iterable<SparseLabel> accept(final SparseLabel sl, final SerialSparseLabels all);
+    public abstract Iterable<SparseLabel> accept(final SVEGFactory factory, final SparseLabel sl);
 
     /**
      * True if this feature is enabled, false if not.

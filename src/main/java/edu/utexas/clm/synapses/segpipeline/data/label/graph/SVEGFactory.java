@@ -5,7 +5,7 @@ import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
 
 /**
  *
@@ -15,33 +15,49 @@ public class SVEGFactory implements Serializable
 
     // For now, graphs are assumed to be non-directional for computational simplicity
 
-    public final ArrayList<SparseLabelFeature> features;
+    private final ArrayList<SparseLabelEdgeFeature> edgeFeatures;
+    private final ArrayList<SparseLabelNodeFeature> nodeFeatures;
+    private final SerialSparseLabels labels;
+    private SparseVectorEdgeGraph sveg = null;
 
-    public SVEGFactory()
+    public SVEGFactory(SerialSparseLabels labels)
     {
-        features = new ArrayList<SparseLabelFeature>();
+        edgeFeatures = new ArrayList<SparseLabelEdgeFeature>();
+        nodeFeatures = new ArrayList<SparseLabelNodeFeature>();
+        this.labels = labels;
     }
 
-    public void addFeature(final SparseLabelFeature slf)
+    public void addFeature(final SparseLabelEdgeFeature slef)
     {
-        features.add(slf);
+        edgeFeatures.add(slef);
     }
 
-    public SparseVectorEdgeGraph makeSVEG(final SerialSparseLabels labels)
+    public void addFeature(final SparseLabelNodeFeature slnf)
     {
-        int fdim = 0; // vector feature cardinality
+        nodeFeatures.add(slnf);
+    }
+
+    /**
+     * Make a SparseVectorEdgeGraph. This function is NOT threadsafe.
+     * @return the created graph.
+     */
+    public SparseVectorEdgeGraph makeSVEG()
+    {
+        int eDim = 0; // edge feature cardinality
+        int nDim = 0; // node feature cardinality
         int i = 0;
-        final int[] offsets = new int[features.size()];
-        final SparseVectorEdgeGraph sveg;
+        final int[] offsets = new int[edgeFeatures.size()];
+        final HashMap<Integer, int[]> nodeFeatures;
 
-        for (SparseLabelFeature feature : features)
+        for (SparseLabelEdgeFeature feature : edgeFeatures)
         {
-            offsets[i++] = fdim;
-            fdim += feature.numDimensions();
-
+            offsets[i++] = eDim;
+            eDim += feature.numDimensions();
         }
 
-        sveg = new SparseVectorEdgeGraph(fdim);
+
+
+        sveg = new SparseVectorEdgeGraph(eDim);
         i = 0; // reset feature index to 0;
 
         /*
@@ -53,7 +69,7 @@ public class SVEGFactory implements Serializable
                     Measure the feature between sl0 and sl1, apply it to sveg.
             Remove sl0 from currentLabels
          */
-        for (SparseLabelFeature feature : features)
+        for (SparseLabelEdgeFeature feature : edgeFeatures)
         {
             final int offset = offsets[i++];
 
@@ -64,12 +80,10 @@ public class SVEGFactory implements Serializable
                 for (final SparseLabel sl0 : labels)
                 {
                     final Iterable<SparseLabel> acceptedLabels =
-                            feature.accept(sl0, currentLabels);
+                            feature.accept(this, sl0, currentLabels);
                     for (final SparseLabel sl1 : acceptedLabels)
                     {
-                        final float[] featureVector =
-                                sveg.getOrCreateEdgeValues(sl0.getValue(), sl1.getValue());
-                        feature.extractFeature(sl0, sl1, featureVector, offset);
+                        feature.extractFeature(this, sl0, sl1, offset);
                     }
                     currentLabels.remove(sl0);
                 }
@@ -79,5 +93,13 @@ public class SVEGFactory implements Serializable
         return sveg;
     }
 
+    public float[] getVector(final SparseLabel sl0, final SparseLabel sl1)
+    {
+        return sveg.getOrCreateEdgeValues(sl0.getValue(), sl1.getValue());
+    }
 
+    public SerialSparseLabels getLabels()
+    {
+        return labels;
+    }
 }
