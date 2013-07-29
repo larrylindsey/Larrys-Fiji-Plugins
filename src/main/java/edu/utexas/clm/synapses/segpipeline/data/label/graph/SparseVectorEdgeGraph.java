@@ -46,6 +46,11 @@ public class SparseVectorEdgeGraph implements Serializable
         if (value == null)
         {
             value = new float[vectorSize];
+            // Is this redundant?
+            for (int i = 0; i < vectorSize; ++i)
+            {
+                value[i] = 0;
+            }
             edges.put(key, value);
         }
 

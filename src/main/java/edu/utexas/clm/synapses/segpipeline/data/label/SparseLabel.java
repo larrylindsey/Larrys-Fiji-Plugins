@@ -16,6 +16,7 @@ public class SparseLabel
     private int val;
     private int index;
     private int minx, miny, maxx, maxy;
+    private float[] nodeFeature;
 
     public SparseLabel(final int val, final int width, final int height)
     {
@@ -30,6 +31,7 @@ public class SparseLabel
         this.height = height;
         this.idx = idx.clone();
         this.index = 1;
+        nodeFeature = new float[0];
     }
 
     public SparseLabel(final SparseLabel sl)
@@ -44,6 +46,7 @@ public class SparseLabel
         height = sl.height;
         index = sl.index;
         this.idx = idx;
+        nodeFeature = sl.nodeFeature.clone();
     }
 
     public void setIndex(int index)
@@ -339,6 +342,20 @@ public class SparseLabel
     public boolean equals(Object o)
     {
         return (o instanceof SparseLabel) && ((SparseLabel)o).val == val;
+    }
+
+    public void setFeatureSize(int size)
+    {
+        nodeFeature = new float[size];
+        for (int i = 0; i < size; ++i)
+        {
+            nodeFeature[i] = 0;
+        }
+    }
+
+    public float[] getFeature()
+    {
+        return nodeFeature;
     }
 
    /* private int[] convertIdx(SparseLabel sl)

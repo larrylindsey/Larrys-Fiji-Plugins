@@ -13,6 +13,7 @@ public abstract class SparseLabelEdgeFeature implements Serializable
 {
 
     private boolean enabled = true;
+    protected int nodeOffset = -1;
 
     /**
      * Returns the number of values extracted for this feature. For example, this would be one for
@@ -45,6 +46,18 @@ public abstract class SparseLabelEdgeFeature implements Serializable
     public abstract Iterable<SparseLabel> accept(final SVEGFactory factory, final SparseLabel sl);
 
     /**
+     * Returns a SparseLabelNodeFeature that will precompute node-centric data required by
+     * this edge feature. This implementation returns a null feature.
+     * @return a SparseLabelNodeFeature that will precompute node-centric data required by
+     * this edge feature
+     */
+    public SparseLabelNodeFeature nodeFeature()
+    {
+        return NullNodeFeature.getFeature();
+    }
+
+
+    /**
      * True if this feature is enabled, false if not.
      * @return true if this feature is enabled, false if not.
      */
@@ -56,6 +69,11 @@ public abstract class SparseLabelEdgeFeature implements Serializable
     public void setEnabled(final boolean enabled)
     {
         this.enabled = enabled;
+    }
+
+    public void setNodeOffset(final int off)
+    {
+        nodeOffset = off;
     }
 
 }

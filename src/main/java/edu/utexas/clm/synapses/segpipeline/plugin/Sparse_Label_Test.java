@@ -125,7 +125,7 @@ public class Sparse_Label_Test implements PlugIn
     public SparseLabel getLabel(SparseLabelFactory factory, Img<IntType> img, int l)
     {
         ArrayList<SparseLabel> labels = new ArrayList<SparseLabel>();
-        factory.makeLabels(img, labels);
+        factory.makeLabels(img, 1, labels);
         for (SparseLabel sl : labels)
         {
             if (sl.getValue() == l)
