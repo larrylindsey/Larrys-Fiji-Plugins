@@ -36,13 +36,22 @@ public class OrientationEdgeFeature extends AbstractInplaneEdgeFeature
             final float ecc1 = nodeFeat1[nodeOffset + 3];
 
             final float ctrAngle = (float)Math.atan2(cy1 - cy0, cx1 - cx0);
-            final float angleSim = angleSimilarity(angle0, angle1);
+            final float angleDiff = angleDifference(angle0, angle1);
             final float eccSim = eccentricitySimilarity(ecc0, ecc1);
 
-            vector[offset] = ctrAngle;
-            vector[offset + 1] = angleSim;
+            vector[offset] = angleDifference(ctrAngle, bisectAngle(angle0, angle1));
+            vector[offset + 1] = angleDiff;
             vector[offset + 2] = eccSim;
         }
+    }
+
+    public static float bisectAngle(final float angle0, final float angle1)
+    {
+        final double x0 = Math.cos(angle0), y0 = Math.sin(angle0);
+        final double x1 = Math.cos(angle1), y1 = Math.sin(angle1);
+
+        return (float)Math.atan2(y0 + y1, x0 + x1);
+
     }
 
     public static float fullArcToHalfArc(final float angle)
@@ -62,7 +71,7 @@ public class OrientationEdgeFeature extends AbstractInplaneEdgeFeature
         return halfArc;
     }
 
-    public static float angleSimilarity(final float angle0, final float angle1)
+    public static float angleDifference(final float angle0, final float angle1)
     {
         /*
         We want the angle of the minimal arc between points on the unit circle at these two angles
