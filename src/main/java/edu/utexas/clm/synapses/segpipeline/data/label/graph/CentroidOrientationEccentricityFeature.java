@@ -7,6 +7,9 @@ import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
  */
 public class CentroidOrientationEccentricityFeature extends SparseLabelNodeFeature
 {
+    private static final CentroidOrientationEccentricityFeature feature =
+            new CentroidOrientationEccentricityFeature();
+
     @Override
     public int numDimensions()
     {
@@ -82,5 +85,8 @@ public class CentroidOrientationEccentricityFeature extends SparseLabelNodeFeatu
 
     }
 
-
+    public static CentroidOrientationEccentricityFeature getFeature()
+    {
+        return feature;
+    }
 }
