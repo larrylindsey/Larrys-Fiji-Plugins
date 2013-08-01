@@ -107,7 +107,13 @@ public class ProbImageToConnectedComponents<A extends RealType<A>>
 
     public static int connectedComponents(final Img<BitType> img, final Img<IntType> label)
     {
-        final IntTypeNamer namer = new IntTypeNamer(1);
+        return connectedComponents(img, label, 1);
+    }
+
+    public static int connectedComponents(final Img<BitType> img, final Img<IntType> label,
+                                          final int start)
+    {
+        final IntTypeNamer namer = new IntTypeNamer(start);
         final NativeImgLabeling<IntType, IntType> labeling =
                 new NativeImgLabeling<IntType, IntType>(label);
 

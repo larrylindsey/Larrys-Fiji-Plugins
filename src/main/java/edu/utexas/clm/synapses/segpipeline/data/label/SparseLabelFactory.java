@@ -157,13 +157,16 @@ public class SparseLabelFactory
                 linearLoc = location[0] + location[1] * width;
                 tVal = cursor.get().getInteger();
 
-                if (currLabel != tVal || builder == null)
+                if (tVal > 0)
                 {
-                    builder = getOrCreate(builderMap, tVal);
-                    currLabel = tVal;
-                }
+                    if (currLabel != tVal || builder == null)
+                    {
+                        builder = getOrCreate(builderMap, tVal);
+                        currLabel = tVal;
+                    }
 
-                builder.append(linearLoc);
+                    builder.append(linearLoc);
+                }
             }
 
             keys = new ArrayList<Integer>(builderMap.keySet());
@@ -173,6 +176,8 @@ public class SparseLabelFactory
             {
                 labelsOut.add(builderMap.get(key).makeSparseLabel(key, index));
             }
+
+            builderMap.clear();
 
             return true;
         }

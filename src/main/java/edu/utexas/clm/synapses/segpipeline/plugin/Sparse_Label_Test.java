@@ -1,20 +1,34 @@
 package edu.utexas.clm.synapses.segpipeline.plugin;
 
+import edu.utexas.clm.archipelago.data.Duplex;
 import edu.utexas.clm.synapses.segpipeline.data.label.*;
+import edu.utexas.clm.synapses.segpipeline.data.label.graph.InplaneOverlapHistogramFeature;
+import edu.utexas.clm.synapses.segpipeline.data.label.graph.IntersectionOverUnionFeature;
+import edu.utexas.clm.synapses.segpipeline.data.label.graph.MaxOverlapFeature;
+import edu.utexas.clm.synapses.segpipeline.data.label.graph.OrientationEdgeFeature;
+import edu.utexas.clm.synapses.segpipeline.data.label.graph.SVEGFactory;
+import edu.utexas.clm.synapses.segpipeline.data.label.graph.SparseVectorEdgeGraph;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.AbstractLabelMorph;
-import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelClose;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.ChainOperation;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelDilate;
-import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOpen;
+import edu.utexas.clm.synapses.segpipeline.process.ProbImageToConnectedComponents;
+import edu.utexas.clm.synapses.segpipeline.process.Threshold;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.PlugIn;
 import ij.process.ShortProcessor;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.img.display.imagej.ImageJFunctions;
+import net.imglib2.io.ImgIOException;
 import net.imglib2.io.ImgOpener;
+import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 
 /**
  *
@@ -24,84 +38,125 @@ public class Sparse_Label_Test implements PlugIn
 
     long st = -1;
 
+    public Img<BitType> getThresholdedImage(final String path) throws ImgIOException
+    {
+        final ImgOpener opener = new ImgOpener();
+        final Img<UnsignedByteType> img;
+        final Img<BitType> th;
+        final long[] dim = new long[2];
+        final UnsignedByteType half = new UnsignedByteType(128);
+        Threshold<UnsignedByteType> threshold = new Threshold<UnsignedByteType>(half, true);
+
+        img = opener.openImg(path,
+            new ArrayImgFactory<UnsignedByteType>(), new UnsignedByteType());
+        img.dimensions(dim);
+        th = new ArrayImgFactory<BitType>().create(dim, new BitType());
+
+        threshold.compute(img, th);
+
+        return th;
+    }
+
+
     public void run(String s)
     {
-        /*ImagePlus imp = IJ.getImage();
-        if (imp != null)
-        {
-            IJ.log("Creating factory");
-            SparseLabelFactory factory = new SparseLabelFactory(imp.getWidth(), imp.getHeight());
-            ArrayList<SparseLabel> labels = new ArrayList<SparseLabel>();
-            IJ.log("Creating IP");
-            ShortProcessor ip = new ShortProcessor(imp.getWidth(), imp.getHeight());
-
-            IJ.log("Using factory to make labels");
-            factory.makeLabels(imp, labels);
-
-            IJ.log("Pushing " + labels.size() + " labels into new image");
-            for (SparseLabel sl : labels)
-            {
-                SparseLabelFactory.addLabelTo(ip, sl);
-            }
-
-            IJ.log("Done");
-
-            new ImagePlus("Label copy", ip).show();
-
-        }*/
-
         try
         {
-            ImgOpener opener = new ImgOpener();
-            Img<IntType> img0 = opener.openImg("/home/larry/image0.tif",
-                    new ArrayImgFactory<IntType>(), new IntType());
-            Img<IntType> img1 = opener.openImg("/home/larry/image1.tif",
-                    new ArrayImgFactory<IntType>(), new IntType());
-            SparseLabelFactory factory = new SparseLabelFactory((int)img0.dimension(0),
-                    (int)img0.dimension(1));
-            LabelDilate ld8 = new LabelDilate(AbstractLabelMorph.diskStrel(8));
-            LabelDilate ld7 = new LabelDilate(AbstractLabelMorph.diskStrel(7));
+            final Img<BitType> th0 =
+                    getThresholdedImage("/nfs/data0/home/larry/Series/Toy/bw01.png");
+            final Img<BitType> th1 =
+                    getThresholdedImage("/nfs/data0/home/larry/Series/Toy/bw02.png");
+            final Img<BitType> th2 =
+                    getThresholdedImage("/nfs/data0/home/larry/Series/Toy/bw03.png");
+            final long[] dim = new long[2];
+            int[][] strel = AbstractLabelMorph.diskStrel(3);
+            final Img<IntType> label0, label1, label2;
+            int n, m;
 
-            LabelOpen lo = new LabelOpen(AbstractLabelMorph.diskStrel(8),
-                    AbstractLabelMorph.diskStrel(8));
-            LabelClose lc = new LabelClose(AbstractLabelMorph.diskStrel(8),
-                    AbstractLabelMorph.diskStrel(8));
+            final SerialSparseLabels labels = new SerialSparseLabels();
+            final SVEGFactory graphFactory;
+            final SparseVectorEdgeGraph graph;
 
-            tic();
-            SparseLabel sl0 = getLabel(factory, img0, 1425);
-            toc("Created sl0"); tic();
-            SparseLabel sl1 = getLabel(factory, img1, 6571);
-            toc("Created sl1"); tic();
-//            SparseLabel sl0bd = ld8.process(ld7.process(sl0));
-//            toc("Dilated sl0"); tic();
-//            SparseLabel sl1bd = ld8.process(ld7.process(sl1));
-//            toc("Dilated sl1"); tic();
-//            SparseLabel sl0U1 = sl0.union(sl1);
-//            toc("Calculated union"); tic();
-//            SparseLabel sl0I1 = sl0.intersection(sl1);
-//            toc("Calculated intersection"); tic();
-            SparseLabel sl0o = lo.process(sl0);
-            toc("Opened sl0"); tic();
-            SparseLabel sl1o = lo.process(sl1);
-            toc("Opened sl1"); tic();
-            SparseLabel sl0c = lc.process(sl0);
-            toc("Closed sl0"); tic();
-            SparseLabel sl1c = lc.process(sl1);
-            toc("Closed sl1");
+            th0.dimensions(dim);
+            label0 = new ArrayImgFactory<IntType>().create(dim, new IntType());
+            label1 = new ArrayImgFactory<IntType>().create(dim, new IntType());
+            label2 = new ArrayImgFactory<IntType>().create(dim, new IntType());
 
+            n = ProbImageToConnectedComponents.connectedComponents(th0, label0);
+            m = ProbImageToConnectedComponents.connectedComponents(th1, label1);
+            ProbImageToConnectedComponents.connectedComponents(th2, label2);
+            ProbImageToConnectedComponents.addToLabel(label1, n - 1);
+            ProbImageToConnectedComponents.addToLabel(label2, n + m - 2);
 
+            IJ.log("First section had " + n + " components");
 
-            showLabel(sl0, "sl0");
-            showLabel(sl1, "sl1");
-//            showLabel(sl0bd, "sl0-dilated");
-//            showLabel(sl1bd, "sl1-dilated");
-//            showLabel(sl0U1, "sl0 union sl1");
-//            showLabel(sl0I1, "sl0 intersect sl1");
-            showLabel(sl0o, "sl0-opened");
-            showLabel(sl1o, "sl1-opened");
-            showLabel(sl0c, "sl0-closed");
-            showLabel(sl1c, "sl1-closed");
+            ImageJFunctions.show(label0, "Label 0");
 
+            ImageJFunctions.show(label1, "Label 1");
+
+            ImageJFunctions.show(label2, "Label 2");
+
+            SparseLabelFactory factory = new SparseLabelFactory((int)th0.dimension(0),
+                    (int)th0.dimension(1));
+
+            factory.makeLabels(label0, 0, labels);
+            factory.makeLabels(label1, 1, labels);
+            factory.makeLabels(label2, 2, labels);
+
+            labels.buildOverlapMap(new ChainOperation(new LabelDilate(strel),
+                    new LabelDilate(strel)));
+
+/*
+            for (SparseLabel sl : labels)
+            {
+                Collection<SparseLabel> overlap = labels.getOverlap(sl);
+                if (overlap.isEmpty())
+                {
+                    IJ.log("No overlaps for " + sl.getValue());
+                }
+                else
+                {
+                    String msg = "Overlaps for " + sl.getValue() + ": ";
+                    for (SparseLabel slo : overlap)
+                    {
+                        msg += slo.getValue() + " ";
+                    }
+                    IJ.log(msg);
+                }
+            }
+
+            IJ.log("Creating graph factory");
+*/
+
+            graphFactory = new SVEGFactory(labels, new OrientationEdgeFeature());
+
+//            IJ.log("Creating graph");
+
+            graph = graphFactory.makeSVEG();
+
+/*
+            for (Duplex<Integer, Integer> key : graph.getEdges())
+            {
+                float[] vector = graph.getEdgeValues(key);
+                String msg = "For edge " + key.a + " - " + key.b + ": ";
+                for (float f : vector)
+                {
+                    msg += String.format("%5.4f ", f);
+                }
+                IJ.log(msg);
+            }
+
+            for (SparseLabel sl : labels)
+            {
+                float[] vector = sl.getFeature();
+                String msg = "For node " + sl.getValue() + ": ";
+                for (float f : vector)
+                {
+                    msg += String.format("%5.4f ", f);
+                }
+                IJ.log(msg);
+            }
+*/
         }
         catch (Exception e)
         {

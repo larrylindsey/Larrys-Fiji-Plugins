@@ -28,6 +28,8 @@ public class CentroidOrientationEccentricityFeature extends SparseLabelNodeFeatu
         // Moments
         float m11 = 0, m20 = 0, m02 = 0;
         float cx, cy;
+        // Linear regression terms
+        final float rise, run;
 
 
         int i = 0;
@@ -56,7 +58,18 @@ public class CentroidOrientationEccentricityFeature extends SparseLabelNodeFeatu
         vector[offset + 1] = cy;
 
         //Orientation
-        vector[offset + 2] = (float)Math.atan2(sx2 * n - (sx1 * sx1), n * sx1y1 - sx1 * sy1);
+        rise = n * sx1y1 - sx1 * sy1;
+        run = sx2 * n - (sx1 * sx1);
+
+        if (rise == 0)
+        {
+            vector[offset + 2] = 0;
+        }
+        else
+        {
+            vector[offset + 2] = (float)Math.atan2(run, rise);
+        }
+
         /*
         Solving for the best fit line y = mx + b over the points x and y in the SparseLabel, I get
           m = (n * sum(x * y) - sum(x) * sum(y)) / (sum(x^2) * n - (sum(x))^2),

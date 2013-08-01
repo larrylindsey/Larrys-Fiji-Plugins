@@ -19,10 +19,15 @@ public class SVEGFactory implements Serializable
     private final SerialSparseLabels labels;
     private SparseVectorEdgeGraph sveg = null;
 
-    public SVEGFactory(SerialSparseLabels labels)
+    public SVEGFactory(final SerialSparseLabels labels, final SparseLabelEdgeFeature... features)
     {
         edgeFeatures = new ArrayList<SparseLabelEdgeFeature>();
         this.labels = labels;
+
+        for (final SparseLabelEdgeFeature feature : features)
+        {
+            addFeature(feature);
+        }
     }
 
     public void addFeature(final SparseLabelEdgeFeature slef)

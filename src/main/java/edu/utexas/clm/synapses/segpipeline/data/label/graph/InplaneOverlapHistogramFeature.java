@@ -23,6 +23,11 @@ public class InplaneOverlapHistogramFeature extends AbstractInplaneEdgeFeature
     private final int bins, binIncrement;
     private transient ExecutorService service;
 
+    public InplaneOverlapHistogramFeature(final int bins, final int binIncrement)
+    {
+        this(-1, bins, binIncrement);
+    }
+
     public InplaneOverlapHistogramFeature(final int restrictIndex,
                                           final int bins, final int binIncrement)
     {
@@ -57,7 +62,7 @@ public class InplaneOverlapHistogramFeature extends AbstractInplaneEdgeFeature
 
             for (final SparseLabel sl : nbd0)
             {
-                final int bin = Math.max(sl.area() / binIncrement, bins - 1);
+                final int bin = Math.min(sl.area() / binIncrement, bins - 1);
                 vector[offset + bin]++;
             }
         }

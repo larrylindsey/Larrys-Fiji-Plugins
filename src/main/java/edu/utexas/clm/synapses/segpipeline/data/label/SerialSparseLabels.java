@@ -4,6 +4,7 @@ package edu.utexas.clm.synapses.segpipeline.data.label;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOperation;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.OperationCallable;
 import edu.utexas.clm.synapses.segpipeline.process.Multithreaded;
+import ij.IJ;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;
@@ -11,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -83,22 +83,21 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         }
     }
 
-    public void putLabel(final SparseLabel sl)
+    public boolean add(final SparseLabel sl)
     {
-        getOrCreate(sl.getIndex()).add(sl);
-    }
-
-    public void putLabels(final Collection<SparseLabel> labels)
-    {
-        for (final SparseLabel sl : labels)
-        {
-            putLabel(sl);
-        }
+        return getOrCreate(sl.getIndex()).add(sl);
     }
 
     public ArrayList<SparseLabel> getLabels(final int index)
     {
-        return new ArrayList<SparseLabel>(serialLabels.get(index));
+        if (serialLabels.containsKey(index))
+        {
+            return new ArrayList<SparseLabel>(serialLabels.get(index));
+        }
+        else
+        {
+            return new ArrayList<SparseLabel>(0);
+        }
     }
 
     public SerialSparseLabels subSeries(int beg, int end)
@@ -185,14 +184,16 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
 
     public void buildOverlapMap(final LabelOperation op)
     {
-        for (int key : serialLabels.keySet())
+        final ArrayList<Integer> keys = new ArrayList<Integer>(serialLabels.keySet());
+
+        for (final int key : keys)
         {
             final TreeSet<SparseLabel> labels = serialLabels.get(key);
             //TODO check performance vs initial capacity
             final HashMap<Integer, TreeSet<SparseLabel>> overlap =
                     new HashMap<Integer, TreeSet<SparseLabel>>(labels.size() * 4 / 3);
 
-            overlapMap.remove(key);
+            //overlapMap.remove(key);
             overlapMap.put(key, overlap);
 
             // Operate over all labels. This should take a while.
@@ -204,17 +205,17 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
             // For each dilated Label
             for (final SparseLabel sl0 : operatedLabels)
             {
+                currentLabels.remove(sl0);
                 // and for each remaining dilated label in our temp list
                 for (final SparseLabel sl1 : currentLabels)
                 {
                     // If sl0 and sl1 intersect
                     if (sl0.intersect(sl1))
                     {
-                        getOrCreate(sl0.getValue()).add(find(labels, sl1));
-                        getOrCreate(sl1.getValue()).add(find(labels, sl0));
+                        getOrCreate(sl0.getValue(), overlap).add(find(labels, sl1));
+                        getOrCreate(sl1.getValue(), overlap).add(find(labels, sl0));
                     }
                 }
-                currentLabels.remove(sl0);
             }
         }
     }

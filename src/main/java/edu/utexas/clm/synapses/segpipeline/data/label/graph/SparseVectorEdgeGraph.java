@@ -1,6 +1,7 @@
 package edu.utexas.clm.synapses.segpipeline.data.label.graph;
 
 import edu.utexas.clm.archipelago.data.Duplex;
+import ij.IJ;
 
 import java.io.Serializable;
 import java.util.*;
@@ -12,14 +13,14 @@ public class SparseVectorEdgeGraph implements Serializable
 {
 
     private final int vectorSize;
-    private final TreeMap<Duplex<Integer, Integer>, float[]> edges;
+    private final Map<Duplex<Integer, Integer>, float[]> edges;
     private final float[] zeroVector;
 
 
     public SparseVectorEdgeGraph(final int vectorSize)
     {
         this.vectorSize = vectorSize;
-        edges = new TreeMap<Duplex<Integer, Integer>, float[]>(duplexComparator());
+        edges = new HashMap<Duplex<Integer, Integer>, float[]>();
         zeroVector = new float[this.vectorSize];
     }
 
@@ -108,7 +109,11 @@ public class SparseVectorEdgeGraph implements Serializable
 
     public Set<Duplex<Integer, Integer>> getEdges()
     {
-        return edges.keySet();
+        final TreeSet<Duplex<Integer,Integer>> set =
+                new TreeSet<Duplex<Integer, Integer>>(duplexComparator());
+        set.addAll(edges.keySet());
+
+        return set;
     }
 
     public float[] getEdgeValues(final Duplex<Integer, Integer> key)
@@ -127,16 +132,21 @@ public class SparseVectorEdgeGraph implements Serializable
     {
         return new Comparator<Duplex<Integer, Integer>>()
         {
+            public int intSignum(final int a)
+            {
+                return a > 0 ? 1 : a == 0 ? 0 : -1;
+            }
+
             public int compare(Duplex<Integer, Integer> o1, Duplex<Integer, Integer> o2)
             {
-                int comp1 = o1.a.compareTo(o1.b);
+                int comp1 = o1.a.compareTo(o2.a);
                 if (comp1 == 0)
                 {
-                    return o2.a.compareTo(o1.b);
+                    return intSignum(o1.b.compareTo(o2.b));
                 }
                 else
                 {
-                    return comp1;
+                    return intSignum(comp1);
                 }
             }
         };
