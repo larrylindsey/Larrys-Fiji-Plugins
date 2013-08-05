@@ -20,4 +20,9 @@ public class MaxOverlapFeature extends AbstractSetOperationFeature
                     Math.max(areaIntersect / area0, areaIntersect / area1);
         }
     }
+
+    public String name()
+    {
+        return "Maximum Overlap";
+    }
 }

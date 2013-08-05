@@ -1,34 +1,26 @@
 package edu.utexas.clm.synapses.segpipeline.plugin;
 
-import edu.utexas.clm.archipelago.data.Duplex;
 import edu.utexas.clm.synapses.segpipeline.data.label.*;
-import edu.utexas.clm.synapses.segpipeline.data.label.graph.InplaneOverlapHistogramFeature;
-import edu.utexas.clm.synapses.segpipeline.data.label.graph.IntersectionOverUnionFeature;
-import edu.utexas.clm.synapses.segpipeline.data.label.graph.MaxOverlapFeature;
-import edu.utexas.clm.synapses.segpipeline.data.label.graph.OrientationEdgeFeature;
-import edu.utexas.clm.synapses.segpipeline.data.label.graph.SVEGFactory;
-import edu.utexas.clm.synapses.segpipeline.data.label.graph.SparseVectorEdgeGraph;
-import edu.utexas.clm.synapses.segpipeline.data.label.operations.AbstractLabelMorph;
-import edu.utexas.clm.synapses.segpipeline.data.label.operations.ChainOperation;
-import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelDilate;
-import edu.utexas.clm.synapses.segpipeline.process.ProbImageToConnectedComponents;
 import edu.utexas.clm.synapses.segpipeline.process.Threshold;
+import hr.irb.fastRandomForest.FastRandomForest;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.PlugIn;
 import ij.process.ShortProcessor;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.io.ImgIOException;
 import net.imglib2.io.ImgOpener;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
+import weka.classifiers.Classifier;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.Instances;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.Random;
 
 /**
  *
@@ -58,9 +50,94 @@ public class Sparse_Label_Test implements PlugIn
     }
 
 
+    public void wekaToy()
+    {
+        final FastRandomForest rf = new FastRandomForest();
+        final Classifier wc = rf;
+        final Instances trainData;
+        final Instances info;
+
+        final ArrayList<Attribute> attributes = new ArrayList<Attribute>();
+        final ArrayList<String> names = new ArrayList<String>();
+
+        rf.setNumTrees(3);
+        rf.setNumFeatures(3);
+        rf.setSeed(new Random().nextInt());
+        rf.setNumThreads(1);
+
+        attributes.add(new Attribute("Value1"));
+        attributes.add(new Attribute("Value2"));
+        names.add("Class1");
+        names.add("Class2");
+        attributes.add(new Attribute("class", names));
+
+        trainData = new Instances("location", attributes, 1);
+        trainData.setClassIndex(trainData.numAttributes() - 1);
+
+        trainData.add(new DenseInstance(1.0, new double[]{1.0, 1.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{1.0, 2.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{2.0, 2.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{3.0, 2.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{3.0, 3.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{3.0, 4.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{3.0, 5.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{4.0, 5.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{5.0, 5.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{5.0, 6.0, 0.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{5.0, 7.0, 0.0}));
+
+        trainData.add(new DenseInstance(1.0, new double[]{2.0, 1.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{3.0, 1.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{4.0, 1.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{4.0, 2.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{4.0, 3.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{4.0, 4.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{5.0, 4.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{6.0, 4.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{6.0, 5.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{6.0, 6.0, 1.0}));
+        trainData.add(new DenseInstance(1.0, new double[]{6.0, 7.0, 1.0}));
+
+
+        info = new Instances("location", attributes, 1);
+        info.setClassIndex(info.numAttributes() - 1);
+
+        try
+        {
+
+            wc.buildClassifier(trainData);
+
+            for (int x = 1; x < 8; ++x)
+            {
+                for (int y = 1; y < 8; ++y)
+                {
+                    DenseInstance ins = new DenseInstance(1.0, new double[]{x, y, 0.0});
+                    String msg = "For " + x + ", " + y + ": ";
+                    ins.setDataset(info);
+                    for (double d : wc.distributionForInstance(ins))
+                    {
+                        msg += d + ", ";
+                    }
+                    IJ.log(msg);
+                }
+            }
+
+        }
+        catch (Exception e)
+        {
+            IJ.log("nuts");
+            e.printStackTrace();
+
+        }
+
+    }
+
     public void run(String s)
     {
-        try
+
+
+
+        /*try
         {
             final Img<BitType> th0 =
                     getThresholdedImage("/nfs/data0/home/larry/Series/Toy/bw01.png");
@@ -106,63 +183,16 @@ public class Sparse_Label_Test implements PlugIn
             labels.buildOverlapMap(new ChainOperation(new LabelDilate(strel),
                     new LabelDilate(strel)));
 
-/*
-            for (SparseLabel sl : labels)
-            {
-                Collection<SparseLabel> overlap = labels.getOverlap(sl);
-                if (overlap.isEmpty())
-                {
-                    IJ.log("No overlaps for " + sl.getValue());
-                }
-                else
-                {
-                    String msg = "Overlaps for " + sl.getValue() + ": ";
-                    for (SparseLabel slo : overlap)
-                    {
-                        msg += slo.getValue() + " ";
-                    }
-                    IJ.log(msg);
-                }
-            }
-
-            IJ.log("Creating graph factory");
-*/
-
             graphFactory = new SVEGFactory(labels, new OrientationEdgeFeature());
-
-//            IJ.log("Creating graph");
 
             graph = graphFactory.makeSVEG();
 
-/*
-            for (Duplex<Integer, Integer> key : graph.getEdges())
-            {
-                float[] vector = graph.getEdgeValues(key);
-                String msg = "For edge " + key.a + " - " + key.b + ": ";
-                for (float f : vector)
-                {
-                    msg += String.format("%5.4f ", f);
-                }
-                IJ.log(msg);
-            }
-
-            for (SparseLabel sl : labels)
-            {
-                float[] vector = sl.getFeature();
-                String msg = "For node " + sl.getValue() + ": ";
-                for (float f : vector)
-                {
-                    msg += String.format("%5.4f ", f);
-                }
-                IJ.log(msg);
-            }
-*/
         }
         catch (Exception e)
         {
             IJ.error("Error: " + e);
             e.printStackTrace();
-        }
+        }*/
 
     }
 

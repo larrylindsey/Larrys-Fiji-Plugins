@@ -1,6 +1,8 @@
 package edu.utexas.clm.synapses.segpipeline.data.graph;
 
 import edu.utexas.clm.archipelago.data.Duplex;
+import edu.utexas.clm.synapses.segpipeline.data.graph.feature.NullEdgeFeature;
+import edu.utexas.clm.synapses.segpipeline.data.graph.feature.SparseLabelEdgeFeature;
 
 import java.io.Serializable;
 import java.util.*;
@@ -14,13 +16,21 @@ public class SparseVectorEdgeGraph implements Serializable
     private final int vectorSize;
     private final Map<Duplex<Integer, Integer>, float[]> edges;
     private final float[] zeroVector;
+    private final Collection<SparseLabelEdgeFeature> edgeFeatures;
 
 
     public SparseVectorEdgeGraph(final int vectorSize)
     {
+        this(vectorSize, null);
+    }
+
+    public SparseVectorEdgeGraph(final int vectorSize,
+                                 final Collection<SparseLabelEdgeFeature> edgeFeatures)
+    {
         this.vectorSize = vectorSize;
         edges = new HashMap<Duplex<Integer, Integer>, float[]>();
         zeroVector = new float[this.vectorSize];
+        this.edgeFeatures = edgeFeatures;
     }
 
 
@@ -55,6 +65,18 @@ public class SparseVectorEdgeGraph implements Serializable
         }
 
         return value;
+    }
+
+    /**
+     * Returns a collection of the features used to create this graph, as in from an SVEGFactory,
+     * or a NullEdgeFeature of size n if no such collection was provided to the constructor,
+     * where n is the cardinality of the edges of this graph.
+     * @return ditto.
+     */
+    public Collection<? extends SparseLabelEdgeFeature> getEdgeFeatures()
+    {
+        return edgeFeatures == null ? Collections.singleton(new NullEdgeFeature(vectorSize)) :
+                edgeFeatures;
     }
 
     public SparseVectorEdgeGraph mapEdges(final EdgeMap map)

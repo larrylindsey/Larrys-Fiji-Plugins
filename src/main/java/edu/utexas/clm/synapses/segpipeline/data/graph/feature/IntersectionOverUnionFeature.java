@@ -19,4 +19,9 @@ public class IntersectionOverUnionFeature extends AbstractSetOperationFeature
         }
 
     }
+
+    public String name()
+    {
+        return "Intersection over Union";
+    }
 }

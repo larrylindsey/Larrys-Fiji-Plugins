@@ -76,4 +76,5 @@ public abstract class SparseLabelEdgeFeature implements Serializable
         nodeOffset = off;
     }
 
+    public abstract String name();
 }

@@ -128,7 +128,7 @@ public class SVEGFactory implements Serializable
             eDim += feature.numDimensions();
         }
 
-        sveg = new SparseVectorEdgeGraph(eDim);
+        sveg = new SparseVectorEdgeGraph(eDim, edgeFeatures);
         i = 0; // reset feature index to 0;
 
         /*

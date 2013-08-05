@@ -126,4 +126,9 @@ public class OrientationEdgeFeature extends AbstractInplaneEdgeFeature
         return CentroidOrientationEccentricityFeature.getFeature();
     }
 
+    public String name()
+    {
+        return "Orientation";
+    }
+
 }

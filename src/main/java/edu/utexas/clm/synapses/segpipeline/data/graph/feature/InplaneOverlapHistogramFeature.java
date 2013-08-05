@@ -58,4 +58,9 @@ public class InplaneOverlapHistogramFeature extends AbstractInplaneEdgeFeature
             }
         }
     }
+
+    public String name()
+    {
+        return "In-plane Neighbor Histogram";
+    }
 }
