@@ -1,6 +1,5 @@
-package edu.utexas.clm.synapses.segpipeline.data.label.graph;
+package edu.utexas.clm.synapses.segpipeline.data.graph;
 
-import edu.utexas.clm.synapses.segpipeline.data.label.SerialSparseLabels;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
 import java.io.Serializable;

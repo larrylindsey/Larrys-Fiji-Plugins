@@ -1,4 +1,4 @@
-package edu.utexas.clm.synapses.segpipeline.data.label.graph;
+package edu.utexas.clm.synapses.segpipeline.data.graph;
 
 /**
  *

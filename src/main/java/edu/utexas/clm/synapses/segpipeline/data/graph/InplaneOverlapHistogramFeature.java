@@ -1,19 +1,9 @@
-package edu.utexas.clm.synapses.segpipeline.data.label.graph;
+package edu.utexas.clm.synapses.segpipeline.data.graph;
 
-import edu.utexas.clm.synapses.segpipeline.data.label.SerialSparseLabels;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
-import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOperation;
-import edu.utexas.clm.synapses.segpipeline.data.label.operations.OperationCallable;
-import edu.utexas.clm.synapses.segpipeline.process.Multithreaded;
 
 import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.TreeSet;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  *

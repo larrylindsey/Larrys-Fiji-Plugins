@@ -1,7 +1,6 @@
-package edu.utexas.clm.synapses.segpipeline.data.label.graph;
+package edu.utexas.clm.synapses.segpipeline.data.graph;
 
 import edu.utexas.clm.archipelago.data.Duplex;
-import ij.IJ;
 
 import java.io.Serializable;
 import java.util.*;
@@ -56,6 +55,25 @@ public class SparseVectorEdgeGraph implements Serializable
         }
 
         return value;
+    }
+
+    public SparseVectorEdgeGraph mapEdges(final EdgeMap map)
+    {
+        if (map.acceptSize(vectorSize))
+        {
+            final SparseVectorEdgeGraph sveg = new SparseVectorEdgeGraph(map.size());
+
+            for (final Duplex<Integer, Integer> edgeKey : edges.keySet())
+            {
+                map.map(getEdgeValues(edgeKey), sveg.getEdgeValues(edgeKey), edgeKey);
+            }
+
+            return sveg;
+        }
+        else
+        {
+            throw new RuntimeException("Map would not accept a graph of size " + vectorSize);
+        }
     }
 
     public SparseVectorEdgeGraph thresholdGraph(final EdgeThreshold et)
