@@ -1,5 +1,7 @@
 package edu.utexas.clm.synapses.segpipeline.data.graph;
 
+import edu.utexas.clm.synapses.segpipeline.data.graph.feature.SparseLabelEdgeFeature;
+import edu.utexas.clm.synapses.segpipeline.data.graph.feature.SparseLabelNodeFeature;
 import edu.utexas.clm.synapses.segpipeline.data.label.SerialSparseLabels;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 

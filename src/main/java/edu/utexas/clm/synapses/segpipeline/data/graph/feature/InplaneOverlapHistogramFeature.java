@@ -1,5 +1,6 @@
-package edu.utexas.clm.synapses.segpipeline.data.graph;
+package edu.utexas.clm.synapses.segpipeline.data.graph.feature;
 
+import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
 import java.util.ArrayList;
