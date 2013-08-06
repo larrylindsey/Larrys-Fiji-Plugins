@@ -67,6 +67,11 @@ public class SparseVectorEdgeGraph implements Serializable
         return value;
     }
 
+    public boolean containsKey(final Duplex<Integer, Integer> key)
+    {
+        return edges.containsKey(key);
+    }
+
     /**
      * Returns a collection of the features used to create this graph, as in from an SVEGFactory,
      * or a NullEdgeFeature of size n if no such collection was provided to the constructor,

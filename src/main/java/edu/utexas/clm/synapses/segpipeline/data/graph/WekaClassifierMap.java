@@ -74,18 +74,24 @@ public class WekaClassifierMap implements EdgeMap
         trainData.setClassIndex(trainData.numAttributes() - 1);
         dataInfo.setClassIndex(dataInfo.numAttributes() - 1);
 
+        // For each edge in the ground-truth graph, find the corresponding edge in the feature
+        // graph, if it exists. Copy
+
         for (final Duplex<Integer, Integer> key : keys)
         {
-            final double[] dVector = new double[size + 1];
-            final float[] fVector = featGraph.getEdgeValues(key);
-
-            for (int i = 0; i < size; ++i)
+            if (featGraph.containsKey(key))
             {
-                dVector[i] = fVector[i];
-            }
-            dVector[size] = gtGraph.getEdgeValues(key)[0];
+                final double[] dVector = new double[size + 1];
+                final float[] fVector = featGraph.getEdgeValues(key);
 
-            trainData.add(new DenseInstance(1.0, dVector));
+                for (int i = 0; i < size; ++i)
+                {
+                    dVector[i] = fVector[i];
+                }
+                dVector[size] = gtGraph.getEdgeValues(key)[0];
+
+                trainData.add(new DenseInstance(1.0, dVector));
+            }
         }
 
         try
