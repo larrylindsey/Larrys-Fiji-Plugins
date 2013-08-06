@@ -14,8 +14,9 @@ public class GroundTruthSVEGFactory extends SVEGFactory
 
 
     public GroundTruthSVEGFactory(final SerialSparseLabels labels,
-                                  final SerialSparseLabels annotations)
+                                  final SerialSparseLabels positiveAnnotations,
+                                  final SerialSparseLabels negativeAnnotations)
     {
-        super(labels, new GroundTruthFeature(annotations));
+        super(labels, new GroundTruthFeature(positiveAnnotations, negativeAnnotations));
     }
 }

@@ -1,45 +1,50 @@
 package edu.utexas.clm.synapses.segpipeline.data.graph.feature;
 
-import edu.utexas.clm.synapses.segpipeline.data.label.SerialSparseLabels;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 
 /**
  *
  */
 public class GroundTruthNodeFeature extends SparseLabelNodeFeature
 {
-    private final Collection<SparseLabel> annotations;
+    private final Collection<SparseLabel> positiveAnnotations, negativeAnnotations;
 
-    public GroundTruthNodeFeature(final Collection<SparseLabel> annotations)
+    public GroundTruthNodeFeature(final Collection<SparseLabel> positiveAnnotations,
+                                  final Collection<SparseLabel> negativeAnnotations)
     {
-        this.annotations = annotations;
+        this.positiveAnnotations = positiveAnnotations;
+        this.negativeAnnotations = negativeAnnotations;
     }
 
     @Override
     public int numDimensions()
     {
-        return 1;
+        return 2;
     }
 
     @Override
     public void extractFeature(final SparseLabel sl)
     {
-        int ovlpCount = 0;
-        int newCount;
-        for (final SparseLabel annotation : annotations)
+        for (final SparseLabel annotation : negativeAnnotations)
         {
             if (sl.getIndex() == annotation.getIndex() &&
-                    sl.intersect(annotation) &&
-                    (newCount = sl.intersection(annotation).area()) > ovlpCount)
+                    sl.intersect(annotation))
             {
                 sl.getFeature()[offset] = annotation.getValue();
-                ovlpCount = newCount;
             }
         }
+
+        for (final SparseLabel annotation : positiveAnnotations)
+        {
+            if (sl.getIndex() == annotation.getIndex() &&
+                    sl.intersect(annotation))
+            {
+                sl.getFeature()[offset + 1] = annotation.getValue();
+            }
+        }
+
     }
 
 

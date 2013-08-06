@@ -12,11 +12,13 @@ import java.util.Collection;
  */
 public class GroundTruthFeature extends SparseLabelEdgeFeature
 {
-    private final Collection<SparseLabel> annotations;
+    private final Collection<SparseLabel> positiveAnnotations, negativeAnnotations;
 
-    public GroundTruthFeature(final Collection<SparseLabel> annotations)
+    public GroundTruthFeature(final Collection<SparseLabel> positiveAnnotations,
+                              final Collection<SparseLabel> negativeAnnotations)
     {
-        this.annotations = annotations;
+        this.positiveAnnotations = positiveAnnotations;
+        this.negativeAnnotations = negativeAnnotations;
     }
 
     @Override
@@ -29,8 +31,14 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     public void extractFeature(SVEGFactory factory,
                                SparseLabel sl0, SparseLabel sl1, int offset)
     {
-        factory.getVector(sl0,sl1)[offset] =
-                sl0.getFeature()[nodeOffset] == sl1.getFeature()[nodeOffset] ? 1 : 0;
+        if (sl0.getFeature()[nodeOffset] == sl1.getFeature()[nodeOffset])
+        {
+            factory.getVector(sl0,sl1)[offset] = 0;
+        }
+        else if (sl0.getFeature()[nodeOffset + 1] == sl1.getFeature()[nodeOffset + 1])
+        {
+            factory.getVector(sl0,sl1)[offset] = 1;
+        }
     }
 
     @Override
@@ -58,6 +66,6 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
 
     public SparseLabelNodeFeature nodeFeature()
     {
-        return new GroundTruthNodeFeature(annotations);
+        return new GroundTruthNodeFeature(positiveAnnotations, negativeAnnotations);
     }
 }
