@@ -2,6 +2,7 @@ package edu.utexas.clm.synapses.segpipeline.data.graph;
 
 import edu.utexas.clm.archipelago.data.Duplex;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.SparseLabelEdgeFeature;
+import ij.IJ;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -102,6 +103,8 @@ public class WekaClassifierMap implements EdgeMap
         {
             throw new RuntimeException(e);
         }
+
+        IJ.log("Trained classifier");
     }
 
     /**
@@ -131,6 +134,8 @@ public class WekaClassifierMap implements EdgeMap
         {
             throw new RuntimeException(e);
         }
+
+        IJ.log("Mapped " + edgeKey.a + " " + edgeKey.b + " to " + outVector[0]);
     }
 
     public int size()

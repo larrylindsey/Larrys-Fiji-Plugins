@@ -92,7 +92,7 @@ public class SparseVectorEdgeGraph implements Serializable
 
             for (final Duplex<Integer, Integer> edgeKey : edges.keySet())
             {
-                map.map(getEdgeValues(edgeKey), sveg.getEdgeValues(edgeKey), edgeKey);
+                map.map(getEdgeValues(edgeKey), sveg.getOrCreateEdgeValues(edgeKey), edgeKey);
             }
 
             return sveg;

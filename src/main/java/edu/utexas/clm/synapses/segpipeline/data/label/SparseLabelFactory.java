@@ -1,5 +1,6 @@
 package edu.utexas.clm.synapses.segpipeline.data.label;
 
+import ij.IJ;
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
 import net.imglib2.Cursor;
@@ -99,8 +100,6 @@ public class SparseLabelFactory
 
             for (int y = 0; y < height; ++y)
             {
-                System.out.println("y: " + y);
-
                 for (int x = 0; x < width; ++x)
                 {
                     linearLoc = x + y * width;
@@ -131,6 +130,14 @@ public class SparseLabelFactory
 
             return true;
         }
+    }
+
+    public boolean makeLabels(final String path,
+                              final int index,
+                              final Collection<SparseLabel> labelsOut)
+    {
+        final ImagePlus imp = IJ.openImage(path);
+        return imp != null && makeLabels(imp, index, labelsOut);
     }
 
     public <T extends IntegerType<T>> boolean makeLabels(final Img<T> img,
