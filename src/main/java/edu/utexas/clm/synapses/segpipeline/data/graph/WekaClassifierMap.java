@@ -65,6 +65,7 @@ public class WekaClassifierMap implements EdgeMap
             for (int i = 0; i < feat.numDimensions(); ++i)
             {
                 attributes.add(new Attribute(feat.name() + " " + i));
+                IJ.log("Attribute: " + feat.name() + " " + i);
             }
         }
         attributes.add(new Attribute("class", names));
@@ -84,12 +85,17 @@ public class WekaClassifierMap implements EdgeMap
             {
                 final double[] dVector = new double[size + 1];
                 final float[] fVector = featGraph.getEdgeValues(key);
+                String msg = "";
 
                 for (int i = 0; i < size; ++i)
                 {
                     dVector[i] = fVector[i];
+                    msg += dVector[i] + " ";
                 }
                 dVector[size] = gtGraph.getEdgeValues(key)[0];
+                msg += dVector[size];
+
+                IJ.log("Training data: " + key.a + " " + key.b + "\t" + msg);
 
                 trainData.add(new DenseInstance(1.0, dVector));
             }
@@ -128,14 +134,12 @@ public class WekaClassifierMap implements EdgeMap
 
         try
         {
-            outVector[0] = (float)classifier.classifyInstance(ins);
+            outVector[0] = (float)classifier.distributionForInstance(ins)[1];
         }
         catch (Exception e)
         {
             throw new RuntimeException(e);
         }
-
-        IJ.log("Mapped " + edgeKey.a + " " + edgeKey.b + " to " + outVector[0]);
     }
 
     public int size()

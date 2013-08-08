@@ -119,7 +119,7 @@ public class Graph_Segmentation_Test implements PlugIn
 
         final SVEGFactory factory = new SVEGFactory(getLabels(e),
                 new OrientationEdgeFeature(),
-                new InplaneOverlapHistogramFeature(256, 8),
+                new InplaneOverlapHistogramFeature(8, 256),
                 new MaxOverlapFeature(),
                 new IntersectionOverUnionFeature());
         return factory.makeSVEG();

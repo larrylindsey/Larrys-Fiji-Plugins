@@ -3,6 +3,7 @@ package edu.utexas.clm.synapses.segpipeline.data.graph.feature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.label.SerialSparseLabels;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
+import ij.IJ;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,13 +32,21 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     public void extractFeature(SVEGFactory factory,
                                SparseLabel sl0, SparseLabel sl1, int offset)
     {
-        if (sl0.getFeature()[nodeOffset] == sl1.getFeature()[nodeOffset])
+        if (sl0.getFeature()[nodeOffset] > 0 &&
+                sl0.getFeature()[nodeOffset] == sl1.getFeature()[nodeOffset])
         {
+            IJ.log("Negative: " + sl0.getValue() + " " + sl1.getValue());
+            factory.getVector(sl0,sl1)[offset] = 1;
+        }
+        else if (sl0.getFeature()[nodeOffset + 1] > 0 &&
+                sl0.getFeature()[nodeOffset + 1] == sl1.getFeature()[nodeOffset + 1])
+        {
+            IJ.log("Positive: " + sl0.getValue() + " " + sl1.getValue());
             factory.getVector(sl0,sl1)[offset] = 0;
         }
-        else if (sl0.getFeature()[nodeOffset + 1] == sl1.getFeature()[nodeOffset + 1])
+        else
         {
-            factory.getVector(sl0,sl1)[offset] = 1;
+            IJ.log("Got unknown assignment");
         }
     }
 
