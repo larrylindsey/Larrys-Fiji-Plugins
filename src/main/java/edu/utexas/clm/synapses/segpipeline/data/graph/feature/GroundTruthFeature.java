@@ -13,6 +13,9 @@ import java.util.Collection;
  */
 public class GroundTruthFeature extends SparseLabelEdgeFeature
 {
+    public static final float VALUE_POS = 0f;
+    public static final float VALUE_NEG = 1f;
+
     private final Collection<SparseLabel> positiveAnnotations, negativeAnnotations;
 
     public GroundTruthFeature(final Collection<SparseLabel> positiveAnnotations,
@@ -32,22 +35,50 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     public void extractFeature(SVEGFactory factory,
                                SparseLabel sl0, SparseLabel sl1, int offset)
     {
-        if (sl0.getFeature()[nodeOffset] > 0 &&
-                sl0.getFeature()[nodeOffset] == sl1.getFeature()[nodeOffset])
+        for (final SparseLabel annotation : positiveAnnotations)
         {
-            IJ.log("Negative: " + sl0.getValue() + " " + sl1.getValue());
-            factory.getVector(sl0,sl1)[offset] = 1;
+            if (sl0.getIndex() == annotation.getIndex() &&
+                    sl0.intersect(annotation))
+            {
+                if (sl1.intersect(annotation))
+                {
+                    factory.getVector(sl0, sl1)[offset] = VALUE_POS;
+                    IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_POS);
+                    return;
+                }
+            }
         }
-        else if (sl0.getFeature()[nodeOffset + 1] > 0 &&
-                sl0.getFeature()[nodeOffset + 1] == sl1.getFeature()[nodeOffset + 1])
+
+        for (final SparseLabel annotation : negativeAnnotations)
         {
-            IJ.log("Positive: " + sl0.getValue() + " " + sl1.getValue());
-            factory.getVector(sl0,sl1)[offset] = 0;
+            if (sl0.getIndex() == annotation.getIndex() &&
+                    sl0.intersect(annotation))
+            {
+                if (sl1.intersect(annotation))
+                {
+                    factory.getVector(sl0, sl1)[offset] = VALUE_NEG;
+                    IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_NEG);
+                    return;
+                }
+            }
         }
-        else
-        {
-            IJ.log("Got unknown assignment");
-        }
+
+//        if (sl0.getFeature()[nodeOffset] > 0 &&
+//                sl0.getFeature()[nodeOffset] == sl1.getFeature()[nodeOffset])
+//        {
+//            IJ.log("Negative: " + sl0.getValue() + " " + sl1.getValue());
+//            factory.getVector(sl0,sl1)[offset] = 1;
+//        }
+//        else if (sl0.getFeature()[nodeOffset + 1] > 0 &&
+//                sl0.getFeature()[nodeOffset + 1] == sl1.getFeature()[nodeOffset + 1])
+//        {
+//            IJ.log("Positive: " + sl0.getValue() + " " + sl1.getValue());
+//            factory.getVector(sl0,sl1)[offset] = 0;
+//        }
+//        else
+//        {
+//            IJ.log("Got unknown assignment");
+//        }
     }
 
     @Override
@@ -73,8 +104,8 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
         return "Ground Truth Class";
     }
 
-    public SparseLabelNodeFeature nodeFeature()
-    {
-        return new GroundTruthNodeFeature(positiveAnnotations, negativeAnnotations);
-    }
+//    public SparseLabelNodeFeature nodeFeature()
+//    {
+//        return new GroundTruthNodeFeature(positiveAnnotations, negativeAnnotations);
+//    }
 }
