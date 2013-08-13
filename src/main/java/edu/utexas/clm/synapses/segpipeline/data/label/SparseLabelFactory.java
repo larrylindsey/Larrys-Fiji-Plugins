@@ -226,6 +226,16 @@ public class SparseLabelFactory
         }
     }
 
+    public static void addLabelTo(ImageProcessor to, SparseLabel sl, ImageProcessor from)
+    {
+        for (int i : sl.getIdx())
+        {
+            int x = i % sl.getWidth();
+            int y = i / sl.getWidth();
+            to.set(x, y, from.getPixel(x, y));
+        }
+    }
+
     public static void addLabelTo(ImagePlus imp, SparseLabel sl)
     {
         addLabelTo(imp.getProcessor(), sl);

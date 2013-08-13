@@ -2,16 +2,21 @@ package edu.utexas.clm.synapses.segpipeline.data.label.operations;
 
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
-import java.util.ArrayList;
 import java.util.TreeSet;
 
 /**
  *
  */
-public abstract class AbstractLabelMorph implements LabelOperation
+public class DilatedBorderOperation implements LabelOperation
 {
+    private final int[][] strel;
 
-    protected SparseLabel dilatedBorder(final SparseLabel input, int[][] strel)
+    public DilatedBorderOperation(final int[][] strel)
+    {
+        this.strel = strel;
+    }
+
+    public SparseLabel process(final SparseLabel input)
     {
         TreeSet<Integer> dilatedBorder = new TreeSet<Integer>();
         final int height = input.getHeight(), width = input.getWidth();
@@ -55,36 +60,6 @@ public abstract class AbstractLabelMorph implements LabelOperation
             linearStrel[i] = strel[i][0] + width * strel[i][1];
         }
         return linearStrel;
-    }
-
-    public static int[][] diskStrel(final int r)
-    {
-        int[][] strel;
-        final ArrayList<int[]> v = new ArrayList<int[]>();
-        final int r2 = r*r;
-
-        for (int i = 0; i <= r; ++i)
-        {
-            for (int j = 0; j <= r; ++j)
-            {
-                if (i*i + j*j <= r2)
-                {
-                    v.add(new int[]{i,j});
-                    v.add(new int[]{-i,j});
-                    v.add(new int[]{i,-j});
-                    v.add(new int[]{-i,-j});
-                }
-            }
-        }
-
-        strel = new int[v.size()][];
-
-        for (int i = 0; i < v.size(); ++i)
-        {
-            strel[i] = v.get(i);
-        }
-
-        return strel;
     }
 
 }

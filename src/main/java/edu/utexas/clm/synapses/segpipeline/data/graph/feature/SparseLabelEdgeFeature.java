@@ -4,6 +4,7 @@ import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 
 
 /**
@@ -77,4 +78,21 @@ public abstract class SparseLabelEdgeFeature implements Serializable
     }
 
     public abstract String name();
+
+    protected ArrayList<SparseLabel> acceptAllNeighbors(final SVEGFactory factory,
+                                                        final SparseLabel sl)
+    {
+        ArrayList<SparseLabel> list =
+                new ArrayList<SparseLabel>(factory.getLabels().getOverlap(sl));
+
+        for (final SparseLabel label : factory.getLabels().getLabels(sl.getIndex() + 1))
+        {
+            if (label.intersect(sl))
+            {
+                list.add(label);
+            }
+        }
+
+        return list;
+    }
 }

@@ -3,6 +3,7 @@ package edu.utexas.clm.synapses.segpipeline.data.graph;
 import edu.utexas.clm.archipelago.data.Duplex;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.NullEdgeFeature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.SparseLabelEdgeFeature;
+import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
 import java.io.Serializable;
 import java.util.*;
@@ -13,24 +14,28 @@ import java.util.*;
 public class SparseVectorEdgeGraph implements Serializable
 {
 
+    public final static float NIL_VALUE = -1f;
     private final int vectorSize;
     private final Map<Duplex<Integer, Integer>, float[]> edges;
     private final float[] zeroVector;
     private final Collection<SparseLabelEdgeFeature> edgeFeatures;
+    private final Collection<SparseLabel> labels;
 
 
     public SparseVectorEdgeGraph(final int vectorSize)
     {
-        this(vectorSize, null);
+        this(vectorSize, null, null);
     }
 
     public SparseVectorEdgeGraph(final int vectorSize,
-                                 final Collection<SparseLabelEdgeFeature> edgeFeatures)
+                                 final Collection<SparseLabelEdgeFeature> edgeFeatures,
+                                 final Collection<SparseLabel> labels)
     {
         this.vectorSize = vectorSize;
         edges = new HashMap<Duplex<Integer, Integer>, float[]>();
         zeroVector = new float[this.vectorSize];
         this.edgeFeatures = edgeFeatures;
+        this.labels = labels;
     }
 
 
@@ -38,6 +43,11 @@ public class SparseVectorEdgeGraph implements Serializable
 //    {
 //        getOrCreateEdgeValues(from, to)[d] = value;
 //    }
+
+    public Collection<SparseLabel> getLabels()
+    {
+        return labels;
+    }
 
     public int getVectorSize()
     {
@@ -56,10 +66,10 @@ public class SparseVectorEdgeGraph implements Serializable
         if (value == null)
         {
             value = new float[vectorSize];
-            // Is this redundant?
+
             for (int i = 0; i < vectorSize; ++i)
             {
-                value[i] = 0;
+                value[i] = NIL_VALUE;
             }
             edges.put(key, value);
         }

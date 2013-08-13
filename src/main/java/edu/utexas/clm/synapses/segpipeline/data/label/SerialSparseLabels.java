@@ -1,10 +1,15 @@
 package edu.utexas.clm.synapses.segpipeline.data.label;
 
 
+import edu.utexas.clm.synapses.segpipeline.data.label.filter.LabelFilter;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOperation;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.OperationCallable;
 import edu.utexas.clm.synapses.segpipeline.process.Multithreaded;
 import ij.IJ;
+import ij.ImagePlus;
+import net.imglib2.img.ImagePlusAdapter;
+import net.imglib2.img.Img;
+import net.imglib2.type.numeric.RealType;
 
 import java.io.Serializable;
 import java.util.AbstractCollection;
@@ -62,6 +67,8 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
     // overlapMap.get(i).get(j) gets all SparseLabels that intersect the SparseLabel with value j.
     private final HashMap<Integer, HashMap<Integer, TreeSet<SparseLabel>>> overlapMap;
 
+    private transient HashMap<Integer, Img<? extends RealType>> imageMap;
+
     private boolean isOverlapPopulated;
     private ExecutorService service;
 
@@ -70,6 +77,7 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
     {
         serialLabels = new HashMap<Integer, TreeSet<SparseLabel>>();
         overlapMap = new HashMap<Integer, HashMap<Integer, TreeSet<SparseLabel>>>();
+        imageMap = null;
         isOverlapPopulated = false;
         setNumProcessors(0);
     }
@@ -97,6 +105,39 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         else
         {
             return new ArrayList<SparseLabel>(0);
+        }
+    }
+
+    public ArrayList<SparseLabel> getLabelsByValue(final int value)
+    {
+        final SparseLabel comparison = new SparseLabel(value, 0, 0);
+        final ArrayList<SparseLabel> valueLabels = new ArrayList<SparseLabel>();
+
+        for (final TreeSet<SparseLabel> set : serialLabels.values())
+        {
+            final SparseLabel sl = set.floor(comparison);
+            if (sl != null && sl.getValue() == value)
+            {
+                valueLabels.add(sl);
+            }
+        }
+
+        return valueLabels;
+    }
+
+    public SparseLabel getLabelByValue(final int value, final int index)
+    {
+        final SparseLabel comparison = new SparseLabel(value, 0, 0);
+        final TreeSet<SparseLabel> indexSet = serialLabels.get(index);
+
+        if (indexSet != null)
+        {
+            final SparseLabel sl = indexSet.floor(comparison);
+            return sl != null && sl.getValue() == value ? sl : null;
+        }
+        else
+        {
+            return null;
         }
     }
 
@@ -220,6 +261,86 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         }
     }
 
+    /**
+     * Replaces the label with the same index and value as newLabel with newLabel, if it exists.
+     * @param newLabel the label to put into this SerialSparseLabels
+     * @return true if there was a label to replace, false otherwise.
+     */
+    public boolean replace(final SparseLabel newLabel)
+    {
+        final TreeSet<SparseLabel> indexSet = serialLabels.get(newLabel.getIndex());
+
+        if (indexSet != null)
+        {
+            final SparseLabel sl = indexSet.floor(newLabel);
+
+            indexSet.remove(sl);
+            indexSet.add(newLabel);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public boolean filterLabels(final LabelFilter filter)
+    {
+        final ArrayList<SparseLabel> removeLabels = new ArrayList<SparseLabel>();
+
+        for (final SparseLabel sl : this)
+        {
+            if (!filter.filter(sl))
+            {
+                removeLabels.add(sl);
+            }
+        }
+
+        this.removeAll(removeLabels);
+
+        return !removeLabels.isEmpty();
+    }
+
+    public boolean operateInPlace(final LabelOperation op)
+    {
+        final ArrayList<Future<SparseLabel>> futures =
+                new ArrayList<Future<SparseLabel>>(this.size());
+
+        for (final SparseLabel sl : this)
+        {
+            futures.add(service.submit(new OperationCallable(op, sl)));
+        }
+
+
+        try
+        {
+            // First pass. Don't perform the replacement until everything finishes.
+            for (final Future<SparseLabel> future : futures)
+            {
+                future.get();
+            }
+
+            // Now, we do the replacement
+            for (final Future<SparseLabel> future : futures)
+            {
+                replace(future.get());
+            }
+            return true;
+        }
+        catch (ExecutionException ee)
+        {
+            IJ.error("" + ee);
+            ee.printStackTrace();
+            return false;
+        }
+        catch (InterruptedException ie)
+        {
+            IJ.error("" + ie);
+            ie.printStackTrace();
+            return false;
+        }
+    }
+
     private ArrayList<SparseLabel> operateOverLabels(final Collection<SparseLabel> labels,
                                                      final LabelOperation op)
     {
@@ -269,12 +390,58 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
     }
 
 
+    public void associateImage(final Img<? extends RealType> img, final int index)
+    {
+        if (serialLabels.containsKey(index))
+        {
+            if (imageMap == null)
+            {
+                imageMap = new HashMap<Integer, Img<? extends RealType>>();
+            }
+
+            imageMap.put(index, img);
+        }
+        else
+        {
+            System.out.println("Printing keys:");
+            for (Integer key : serialLabels.keySet())
+            {
+                System.out.println("Key " + key);
+            }
+
+            throw new IllegalArgumentException("Tried to associate image for index " + index +
+                    " but there are no labels with which to associate.");
+        }
+    }
+
+    public void associateImage(final ImagePlus imp, final int index)
+    {
+        Img<? extends RealType> img = ImagePlusAdapter.wrapReal(imp);
+        associateImage(img, index);
+    }
+
+    public Img<? extends RealType> getImage(final SparseLabel sl)
+    {
+        return getImage(sl.getIndex());
+    }
+
+    public Img<? extends RealType> getImage(final int index)
+    {
+        return imageMap == null ? null : imageMap.get(index);
+    }
+
+    public void clearImageMap()
+    {
+        imageMap.clear();
+        imageMap = null;
+    }
+
     public void setService(ExecutorService service)
     {
         this.service = service;
     }
 
-    public void setNumProcessors(int np)
+    public void setNumProcessors(final int np)
     {
         service = Executors.newFixedThreadPool(np > 0 ?
                 np : Runtime.getRuntime().availableProcessors());

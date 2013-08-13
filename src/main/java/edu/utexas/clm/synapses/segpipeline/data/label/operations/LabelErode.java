@@ -5,7 +5,7 @@ import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 /**
  *
  */
-public class LabelErode extends AbstractLabelMorph
+public class LabelErode implements LabelOperation
 {
     private final int[][] strel;
 
@@ -16,6 +16,6 @@ public class LabelErode extends AbstractLabelMorph
 
     public SparseLabel process(SparseLabel input)
     {
-        return input.subtract(dilatedBorder(input, strel));
+        return input.subtract(new DilatedBorderOperation(strel).process(input));
     }
 }

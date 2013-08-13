@@ -5,7 +5,7 @@ import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 /**
  *
  */
-public abstract class AbstractLabelDoubleMorph extends AbstractLabelMorph
+public abstract class AbstractLabelDoubleMorph implements LabelOperation
 {
 
     protected void reverseStrels(final int[][][] strels)
@@ -23,7 +23,7 @@ public abstract class AbstractLabelDoubleMorph extends AbstractLabelMorph
 
     protected SparseLabel seriallyDilatedBorder(final SparseLabel input, final int[][][] strels)
     {
-        SparseLabel border = dilatedBorder(input, strels[0]);
+        SparseLabel border = new DilatedBorderOperation(strels[0]).process(input);
 
         for (int i = 1; i < strels.length; ++i)
         {

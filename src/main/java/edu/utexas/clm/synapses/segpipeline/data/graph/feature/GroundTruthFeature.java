@@ -16,10 +16,10 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     public static final float VALUE_POS = 0f;
     public static final float VALUE_NEG = 1f;
 
-    private final Collection<SparseLabel> positiveAnnotations, negativeAnnotations;
+    private final SerialSparseLabels positiveAnnotations, negativeAnnotations;
 
-    public GroundTruthFeature(final Collection<SparseLabel> positiveAnnotations,
-                              final Collection<SparseLabel> negativeAnnotations)
+    public GroundTruthFeature(final SerialSparseLabels positiveAnnotations,
+                              final SerialSparseLabels negativeAnnotations)
     {
         this.positiveAnnotations = positiveAnnotations;
         this.negativeAnnotations = negativeAnnotations;
@@ -31,36 +31,47 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
         return 1;
     }
 
-    @Override
-    public void extractFeature(SVEGFactory factory,
-                               SparseLabel sl0, SparseLabel sl1, int offset)
+    private boolean coOverlap(final SparseLabel sl0, final SparseLabel sl1,
+                              final SerialSparseLabels annotations)
     {
-        for (final SparseLabel annotation : positiveAnnotations)
+        for (final SparseLabel annotation : annotations.getLabels(sl0.getIndex()))
         {
-            if (sl0.getIndex() == annotation.getIndex() &&
-                    sl0.intersect(annotation))
+            if (sl0.intersect(annotation))
             {
-                if (sl1.intersect(annotation))
+                /*
+                sl0 and sl1 may have different indices, so we check for another annotation with
+                the same value as the one that overlaps sl0, but with the same index as sl1.
+
+                otherAnnotation may be assigned null, but SparseLabel.intersect(null) returns false.
+                */
+                final SparseLabel otherAnnotation =
+                        annotations.getLabelByValue(annotation.getValue(), sl1.getIndex());
+                if (sl1.intersect(otherAnnotation))
                 {
-                    factory.getVector(sl0, sl1)[offset] = VALUE_POS;
-                    IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_POS);
-                    return;
+                    return true;
                 }
             }
         }
 
-        for (final SparseLabel annotation : negativeAnnotations)
+
+        return false;
+    }
+
+    @Override
+    public void extractFeature(SVEGFactory factory,
+                               SparseLabel sl0, SparseLabel sl1, int offset)
+    {
+        if (coOverlap(sl0, sl1, positiveAnnotations))
         {
-            if (sl0.getIndex() == annotation.getIndex() &&
-                    sl0.intersect(annotation))
-            {
-                if (sl1.intersect(annotation))
-                {
-                    factory.getVector(sl0, sl1)[offset] = VALUE_NEG;
-                    IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_NEG);
-                    return;
-                }
-            }
+            factory.getVector(sl0, sl1)[offset] = VALUE_POS;
+            IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_POS);
+            return;
+        }
+
+        if (coOverlap(sl0, sl1, negativeAnnotations))
+        {
+            factory.getVector(sl0, sl1)[offset] = VALUE_NEG;
+            IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_NEG);
         }
 
 //        if (sl0.getFeature()[nodeOffset] > 0 &&
@@ -84,18 +95,7 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     @Override
     public Iterable<SparseLabel> accept(SVEGFactory factory, SparseLabel sl)
     {
-        ArrayList<SparseLabel> list =
-                new ArrayList<SparseLabel>(factory.getLabels().getOverlap(sl));
-
-        for (final SparseLabel label : factory.getLabels().getLabels(sl.getIndex() + 1))
-        {
-            if (label.intersect(sl))
-            {
-                list.add(label);
-            }
-        }
-
-        return list;
+        return acceptAllNeighbors(factory, sl);
     }
 
     @Override

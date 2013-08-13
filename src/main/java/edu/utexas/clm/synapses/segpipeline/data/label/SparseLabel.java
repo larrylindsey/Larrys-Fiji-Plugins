@@ -129,7 +129,7 @@ public class SparseLabel
     public boolean intersect(final SparseLabel sl)
     {
 
-        if (isBoundingBoxOverlap(sl)) //TODO: is this faster?
+        if (sl != null && isBoundingBoxOverlap(sl)) //TODO: is this faster?
         {
             int i = 0, j = 0;
             while (i < idx.length && j < sl.idx.length)
