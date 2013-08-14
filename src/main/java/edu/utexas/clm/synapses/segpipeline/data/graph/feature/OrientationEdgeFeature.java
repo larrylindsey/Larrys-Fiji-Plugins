@@ -2,6 +2,7 @@ package edu.utexas.clm.synapses.segpipeline.data.graph.feature;
 
 import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
+import ij.IJ;
 
 /**
  *
@@ -42,6 +43,16 @@ public class OrientationEdgeFeature extends AbstractInplaneEdgeFeature
             final float[] vector = factory.getVector(sl0, sl1);
             final float[] nodeFeat0 = sl0.getFeature();
             final float[] nodeFeat1 = sl1.getFeature();
+
+            if (nodeFeat0.length <= 0)
+            {
+                IJ.log("Got zero length feature vector for " + sl0.getValue());
+            }
+
+            if (nodeFeat1.length <= 0)
+            {
+                IJ.log("Got zero length feature vector for " + sl1.getValue());
+            }
 
             final float cx0 = nodeFeat0[nodeOffset], cy0 = nodeFeat0[nodeOffset + 1];
             final float cx1 = nodeFeat1[nodeOffset], cy1 = nodeFeat1[nodeOffset + 1];

@@ -5,6 +5,7 @@ import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.graph.SparseVectorEdgeGraph;
 import edu.utexas.clm.synapses.segpipeline.data.graph.WekaClassifierMap;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.GroundTruthFeature;
+import edu.utexas.clm.synapses.segpipeline.data.graph.feature.ImageHistogramSimilarityFeature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.InplaneOverlapHistogramFeature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.IntersectionOverUnionFeature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.MaxOverlapFeature;
@@ -136,17 +137,23 @@ public class Graph_Segmentation_Test implements PlugIn
 
     private SparseVectorEdgeGraph getGraph(final Element e)
     {
-
+        IJ.log("Getting labels for element " + e.getTagName());
         final SerialSparseLabels labels = getLabels(e);
+        IJ.log("Creating SVEG factory");
         final SVEGFactory factory = new SVEGFactory(labels,
                 new OrientationEdgeFeature(),
                 new InplaneOverlapHistogramFeature(8, 256),
                 new MaxOverlapFeature(),
                 new IntersectionOverUnionFeature(),
-                new SizeFeature());
+                new SizeFeature(),
+                new ImageHistogramSimilarityFeature());
+        IJ.log("Associating images");
         associateImages(e, labels);
+        IJ.log("Removing small labels");
         labels.filterLabels(new SizeGrelFilter(128));
+        IJ.log("Closing labels in place");
         labels.operateInPlace(new LabelClose(Strels.diskStrel(8), Strels.diskStrel(8)));
+        IJ.log("Making SVEG");
         return factory.makeSVEG();
     }
 

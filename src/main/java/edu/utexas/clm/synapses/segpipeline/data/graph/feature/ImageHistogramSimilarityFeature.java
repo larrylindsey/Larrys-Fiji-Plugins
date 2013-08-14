@@ -3,7 +3,10 @@ package edu.utexas.clm.synapses.segpipeline.data.graph.feature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.label.SerialSparseLabels;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.ChainOperation;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.DilatedBorderOperation;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelDilate;
+import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOperation;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.Strels;
 import net.imglib2.Cursor;
 import net.imglib2.img.Img;
@@ -16,14 +19,17 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
 {
 
     private final int nHist;
-    private final int nbdSize;
     private final float imageMax;
+    private final LabelOperation borderOp;
 
     public ImageHistogramSimilarityFeature()
     {
+        final int[][] strel8 = Strels.diskStrel(8);
         nHist = 255;
-        nbdSize = 32;
         imageMax = 255;
+        // Dilate the border by 32 pixels
+        borderOp = new ChainOperation(new DilatedBorderOperation(strel8),
+                new LabelDilate(strel8), new LabelDilate(strel8), new LabelDilate(strel8));
     }
 
     @Override
@@ -78,8 +84,7 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
         }
         else
         {
-            final DilatedBorderOperation op = new DilatedBorderOperation(Strels.diskStrel(nbdSize));
-            final SparseLabel nbd = op.process(sl0).intersection(op.process(sl1));
+            final SparseLabel nbd = borderOp.process(sl0).intersection(borderOp.process(sl1));
             histogram(sl0.intersection(nbd), img, h0);
             histogram(sl1.intersection(nbd), img, h1);
             return true;
