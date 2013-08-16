@@ -17,6 +17,7 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     public static final float VALUE_NEG = 1f;
 
     private final SerialSparseLabels positiveAnnotations, negativeAnnotations;
+    private int pos = 0, neg = 0;
 
     public GroundTruthFeature(final SerialSparseLabels positiveAnnotations,
                               final SerialSparseLabels negativeAnnotations)
@@ -61,18 +62,17 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     public void extractFeature(SVEGFactory factory,
                                SparseLabel sl0, SparseLabel sl1, int offset)
     {
-        if (coOverlap(sl0, sl1, positiveAnnotations))
-        {
-            factory.getVector(sl0, sl1)[offset] = VALUE_POS;
-            IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_POS);
-            return;
-        }
-
         if (coOverlap(sl0, sl1, negativeAnnotations))
         {
             factory.getVector(sl0, sl1)[offset] = VALUE_NEG;
-            IJ.log("" + sl0.getValue() + " " + sl1.getValue() + " " + VALUE_NEG);
+            ++neg;
         }
+        else if (coOverlap(sl0, sl1, positiveAnnotations))
+        {
+            factory.getVector(sl0, sl1)[offset] = VALUE_POS;
+            ++pos;
+        }
+
 
 //        if (sl0.getFeature()[nodeOffset] > 0 &&
 //                sl0.getFeature()[nodeOffset] == sl1.getFeature()[nodeOffset])
@@ -102,6 +102,11 @@ public class GroundTruthFeature extends SparseLabelEdgeFeature
     public String name()
     {
         return "Ground Truth Class";
+    }
+
+    public String toString()
+    {
+        return "Ground Truth with " + pos + " positive examples and " + neg + " negative ones";
     }
 
 //    public SparseLabelNodeFeature nodeFeature()
