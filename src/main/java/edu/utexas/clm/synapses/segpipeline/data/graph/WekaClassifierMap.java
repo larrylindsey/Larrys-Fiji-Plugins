@@ -52,6 +52,8 @@ public class WekaClassifierMap implements EdgeMap
         final ArrayList<String> names = new ArrayList<String>();
         final Instances trainData;
         final int size = featGraph.getVectorSize();
+        int posCnt = 0, negCnt = 0;
+        final float posWt, negWt;
 
         // Enumerate classes
         for (int i = 0; i < nClasses; ++i)
@@ -76,28 +78,40 @@ public class WekaClassifierMap implements EdgeMap
         trainData.setClassIndex(trainData.numAttributes() - 1);
         dataInfo.setClassIndex(dataInfo.numAttributes() - 1);
 
+        for (final Duplex<Integer, Integer> key : keys)
+        {
+            if (gtGraph.getEdgeValues(key)[0] == 0f)
+            {
+                ++posCnt;
+            }
+            else
+            {
+                ++negCnt;
+            }
+        }
+
+        posWt = (float)negCnt / (float)keys.size();
+        negWt = (float)posCnt / (float)keys.size();
+
         // For each edge in the ground-truth graph, find the corresponding edge in the feature
         // graph, if it exists. Copy
-
         for (final Duplex<Integer, Integer> key : keys)
         {
             if (featGraph.containsKey(key))
             {
                 final double[] dVector = new double[size + 1];
                 final float[] fVector = featGraph.getEdgeValues(key);
-                String msg = "";
+                final float wt;
 
                 for (int i = 0; i < size; ++i)
                 {
                     dVector[i] = fVector[i];
-                    msg += dVector[i] + " ";
                 }
                 dVector[size] = gtGraph.getEdgeValues(key)[0];
-                msg += dVector[size];
 
-                IJ.log("Training data: " + key.a + " " + key.b + "\t" + msg);
+                wt = dVector[size] == 0 ? posWt : negWt;
 
-                trainData.add(new DenseInstance(1.0, dVector));
+                trainData.add(new DenseInstance(wt, dVector));
             }
         }
 
