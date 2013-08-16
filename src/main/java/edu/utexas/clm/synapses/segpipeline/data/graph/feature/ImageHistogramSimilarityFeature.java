@@ -8,7 +8,9 @@ import edu.utexas.clm.synapses.segpipeline.data.label.operations.DilatedBorderOp
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelDilate;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOperation;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.Strels;
+import ij.IJ;
 import net.imglib2.Cursor;
+import net.imglib2.RandomAccess;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 
@@ -27,9 +29,7 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
         final int[][] strel8 = Strels.diskStrel(8);
         nHist = 255;
         imageMax = 255;
-        // Dilate the border by 32 pixels
-        borderOp = new ChainOperation(new DilatedBorderOperation(strel8),
-                new LabelDilate(strel8), new LabelDilate(strel8), new LabelDilate(strel8));
+        borderOp = new DilatedBorderOperation(strel8);
     }
 
     @Override
@@ -63,10 +63,23 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
     public float histogramMetric(final int[] h0, final int[] h1)
     {
         float minSum = 0, maxSum = 0;
+
+        float h0s = 0, h1s = 0;
+
+        for (int h : h0)
+        {
+            h0s += h;
+        }
+
+        for (int h : h1)
+        {
+            h1s += h;
+        }
+
         for (int i = 0; i < h0.length; ++i)
         {
-            minSum += Math.min(h0[i], h1[i]);
-            maxSum += Math.max(h0[i], h1[i]);
+            minSum += Math.min(((float)h0[i]) / h0s, ((float)h1[i]/h1s));
+            maxSum += Math.max(((float)h0[i]) / h0s, ((float)h1[i]/h1s));
         }
         return minSum / maxSum;
     }
@@ -111,8 +124,8 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
 
     public void histogram(final SparseLabel sl, final Img<? extends RealType> img, final int[] h)
     {
-        final Cursor<? extends RealType> cursor = img.localizingCursor();
-        final int[] pos = new int[2];
+        final RandomAccess<? extends RealType> ra = img.randomAccess();
+        final long[] pos = new long[2];
         final float binWidth = imageMax / (float)nHist;
         int bin;
 
@@ -120,8 +133,18 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
         {
             pos[0] = idx % sl.getWidth();
             pos[1] = idx / sl.getWidth();
-            cursor.localize(pos);
-            bin = (int)(cursor.get().getRealFloat() / binWidth);
+            ra.setPosition(pos);
+            try
+            {
+                bin = (int)(ra.get().getRealFloat() / binWidth);
+            }
+            catch (ArrayIndexOutOfBoundsException aioobe)
+            {
+                IJ.log("Caught OOBE at " + pos[0] + ", " + pos[1] + ". Linear idx: " + idx);
+                IJ.log("Label was size " + sl.getWidth() + " " + sl.getHeight());
+                throw aioobe;
+            }
+
             if (bin >= h.length)
             {
                 bin = h.length - 1;
