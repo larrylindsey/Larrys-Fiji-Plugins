@@ -3,6 +3,7 @@ package edu.utexas.clm.synapses.segpipeline.data.graph;
 import edu.utexas.clm.archipelago.data.Duplex;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.NullEdgeFeature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.feature.SparseLabelEdgeFeature;
+import edu.utexas.clm.synapses.segpipeline.data.label.SerialSparseLabels;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
 import java.io.Serializable;
@@ -19,7 +20,7 @@ public class SparseVectorEdgeGraph implements Serializable
     private final Map<Duplex<Integer, Integer>, float[]> edges;
     private final float[] zeroVector;
     private final Collection<SparseLabelEdgeFeature> edgeFeatures;
-    private final Collection<SparseLabel> labels;
+    private final SerialSparseLabels labels;
 
 
     public SparseVectorEdgeGraph(final int vectorSize)
@@ -29,7 +30,7 @@ public class SparseVectorEdgeGraph implements Serializable
 
     public SparseVectorEdgeGraph(final int vectorSize,
                                  final Collection<SparseLabelEdgeFeature> edgeFeatures,
-                                 final Collection<SparseLabel> labels)
+                                 final SerialSparseLabels labels)
     {
         this.vectorSize = vectorSize;
         edges = new HashMap<Duplex<Integer, Integer>, float[]>();
@@ -44,7 +45,7 @@ public class SparseVectorEdgeGraph implements Serializable
 //        getOrCreateEdgeValues(from, to)[d] = value;
 //    }
 
-    public Collection<SparseLabel> getLabels()
+    public SerialSparseLabels getLabels()
     {
         return labels;
     }
@@ -182,6 +183,110 @@ public class SparseVectorEdgeGraph implements Serializable
         return getEdgeValues(new Duplex<Integer, Integer>(a, b));
     }
 
+    public TreeSet<SparseLabel> equivalentLabels(final int value, final EdgeMap map)
+    {
+        final List<Duplex<Integer, Integer>> edgeList;
+        final int minEq;
+        final TreeSet<SparseLabel> eqLabels;
+        final TreeSet<Integer> eqVals;
+
+        if (map.size() != 1)
+        {
+            throw new IllegalArgumentException("Map must have size of 1");
+        }
+
+        if (!map.acceptSize(vectorSize))
+        {
+            throw new IllegalArgumentException("Map must accept a graph with vector size " +
+                    vectorSize);
+        }
+
+        // Sorted edge list
+        edgeList = new ArrayList<Duplex<Integer, Integer>>(edges.keySet());
+        Collections.sort(edgeList, duplexComparator());
+
+        minEq = minimumEquivalentLabel(value, edgeList);
+        eqVals = equivalentValues(minEq, edgeList);
+
+        eqLabels = new TreeSet<SparseLabel>();
+
+        for (int val : eqVals)
+        {
+            eqLabels.addAll(labels.getLabelsByValue(val));
+        }
+
+        return eqLabels;
+    }
+
+    private TreeSet<Integer> equivalentValues(int value, List<Duplex<Integer,Integer>> edgeList)
+    {
+        final int off = edgeList.get(0).a;
+        final boolean[] mark = new boolean[edgeList.get(edgeList.size() - 1).b - off];
+        final TreeSet<Integer> q = new TreeSet<Integer>(), ints = new TreeSet<Integer>();
+
+        for (int i = 0; i < mark.length; ++i)
+        {
+            mark[i] = false;
+        }
+
+        q.add(value);
+        mark[value - off] = true;
+
+        while (!q.isEmpty())
+        {
+            int v = q.pollFirst();
+            int w;
+            ints.add(v);
+
+            for (int i = 0; i < edgeList.size() && edgeList.get(i).a <= v; ++i)
+            {
+                if ((w = edgeList.get(i).a) == v && !mark[w - off])
+                {
+                    q.add(w);
+                    mark[w - off] = true;
+                }
+            }
+        }
+
+        return ints;
+    }
+
+    private HashMap<Integer, TreeSet<Integer>> buildEdgeMap()
+    {
+        final HashMap<Integer, TreeSet<Integer>> map =
+                new HashMap<Integer, TreeSet<Integer>>();
+        for (final Duplex<Integer, Integer> key : edges.keySet())
+        {
+            TreeSet<Integer> set = map.get(key.a);
+            if (set == null)
+            {
+                set = new TreeSet<Integer>();
+                map.put(key.a, set);
+            }
+            set.add(key.b);
+        }
+        return map;
+    }
+
+    private int minimumEquivalentLabel(final int value,
+                                       final List<Duplex<Integer, Integer>> edgeList)
+    {
+        int min = Integer.MAX_VALUE;
+        int nextMin = value;
+        while (nextMin < min)
+        {
+            min = nextMin;
+            for (int i = 0; i < edgeList.size() && edgeList.get(i).a < min && min == nextMin; ++i)
+            {
+                if (edgeList.get(i).b == min)
+                {
+                    nextMin = edgeList.get(i).a;
+                }
+            }
+        }
+
+        return min;
+    }
 
     public static Comparator<Duplex<Integer, Integer>> duplexComparator()
     {

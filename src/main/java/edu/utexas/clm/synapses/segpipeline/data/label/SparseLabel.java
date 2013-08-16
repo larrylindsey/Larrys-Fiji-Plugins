@@ -333,15 +333,18 @@ public class SparseLabel
     }
 
     /**
-     * Returns true if Object o is a SparseLabel with the same value as this one. This function
-     * assumes that only one SparseLabel exists with this given value, or that another SparseLabel
-     * with this value is equivalent.
+     * Returns true if Object o is a SparseLabel with the same value and index as this one. This function
+     * assumes that only one SparseLabel exists with this given value and index, or that any other such SparseLabel
+     * is equivalent.
      * @param o an Object that may or may not be equal to this SparseLabel.
      * @return true if Object o is a SparseLabel with the same value as this one.
      */
-    public boolean equals(Object o)
+    public boolean equals(final Object o)
     {
-        return (o instanceof SparseLabel) && ((SparseLabel)o).val == val;
+        SparseLabel other;
+        return (o instanceof SparseLabel) &&
+                (other = (SparseLabel)o).val == val
+                && other.index == index;
     }
 
     public void setFeatureSize(int size)

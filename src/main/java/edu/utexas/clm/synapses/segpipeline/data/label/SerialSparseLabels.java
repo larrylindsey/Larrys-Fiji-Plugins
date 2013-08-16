@@ -125,6 +125,22 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         return valueLabels;
     }
 
+    public SparseLabel getFirstLabelByValue(final int value)
+    {
+        final SparseLabel comparison = new SparseLabel(value, 0, 0);
+
+        for (final TreeSet<SparseLabel> set : serialLabels.values())
+        {
+            final SparseLabel sl = set.floor(comparison);
+            if (sl != null && sl.getValue() == value)
+            {
+                return sl;
+            }
+        }
+
+        return null;
+    }
+
     public SparseLabel getLabelByValue(final int value, final int index)
     {
         final SparseLabel comparison = new SparseLabel(value, 0, 0);
