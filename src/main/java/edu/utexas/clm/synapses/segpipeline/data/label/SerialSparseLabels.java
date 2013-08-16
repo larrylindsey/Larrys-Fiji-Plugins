@@ -1,6 +1,7 @@
 package edu.utexas.clm.synapses.segpipeline.data.label;
 
 
+import edu.utexas.clm.archipelago.Cluster;
 import edu.utexas.clm.synapses.segpipeline.data.label.filter.LabelFilter;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.LabelOperation;
 import edu.utexas.clm.synapses.segpipeline.data.label.operations.OperationCallable;
@@ -17,7 +18,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeSet;
+import java.util.Vector;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -58,6 +62,43 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         public void remove()
         {
             currIterator.remove();
+        }
+    }
+
+    private class FindOverlapCallable implements Callable<HashMap<Integer, TreeSet<SparseLabel>>>
+    {
+        final SparseLabel sl0;
+        final List<SparseLabel> opLabels;
+        final TreeSet<SparseLabel> origLabels;
+        final int begin;
+
+
+        public FindOverlapCallable(final SparseLabel label, final TreeSet<SparseLabel> origLabels,
+                                   final List<SparseLabel> opLabels, final int begin)
+        {
+            sl0 = label;
+            this.opLabels = opLabels;
+            this.origLabels = origLabels;
+            this.begin = begin;
+        }
+
+        public HashMap<Integer, TreeSet<SparseLabel>> call() throws Exception
+        {
+            final HashMap<Integer, TreeSet<SparseLabel>> overlap =
+                    new HashMap<Integer, TreeSet<SparseLabel>>();
+
+            for (int i = begin; i < opLabels.size(); ++i)
+            {
+                final SparseLabel sl1 = opLabels.get(i);
+                // If sl0 and sl1 intersect
+                if (sl0.intersect(sl1))
+                {
+                    getOrCreate(sl0.getValue(), overlap).add(find(origLabels, sl1));
+                    getOrCreate(sl1.getValue(), overlap).add(find(origLabels, sl0));
+                }
+            }
+
+            return overlap;
         }
     }
 
@@ -239,6 +280,16 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         return floor;
     }
 
+    private void mergeMaps(final HashMap<Integer, TreeSet<SparseLabel>> small,
+                           final HashMap<Integer, TreeSet<SparseLabel>> large)
+    {
+        for (int key : small.keySet())
+        {
+            final TreeSet<SparseLabel> set = getOrCreate(key, large);
+            set.addAll(small.get(key));
+        }
+    }
+
     public void buildOverlapMap(final LabelOperation op)
     {
         final ArrayList<Integer> keys = new ArrayList<Integer>(serialLabels.keySet());
@@ -249,6 +300,9 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
             //TODO check performance vs initial capacity
             final HashMap<Integer, TreeSet<SparseLabel>> overlap =
                     new HashMap<Integer, TreeSet<SparseLabel>>(labels.size() * 4 / 3);
+            final ExecutorService local = localService();
+            final ArrayList<Future<HashMap<Integer, TreeSet<SparseLabel>>>> futures =
+                    new ArrayList<Future<HashMap<Integer, TreeSet<SparseLabel>>>>(labels.size());
 
             //overlapMap.remove(key);
             overlapMap.put(key, overlap);
@@ -256,7 +310,34 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
             // Operate over all labels. This should take a while.
             final ArrayList<SparseLabel> operatedLabels = operateOverLabels(labels, op);
 
-            // Create a temp list.
+            for (int i = 0; i < operatedLabels.size(); ++i)
+            {
+                futures.add(local.submit(new FindOverlapCallable(operatedLabels.get(i), labels,
+                        operatedLabels, i + 1)));
+            }
+
+
+            try
+            {
+                //TODO: Check if this is really faster than using a synchronized map
+                for (final Future<HashMap<Integer, TreeSet<SparseLabel>>> future : futures)
+                {
+                    // get the overlap map for an individual sparselabel
+                    final HashMap<Integer, TreeSet<SparseLabel>> map = future.get();
+
+                    mergeMaps(map, overlap);
+                }
+            }
+            catch (ExecutionException ee)
+            {
+                throw new RuntimeException(ee);
+            }
+            catch (InterruptedException ie)
+            {
+                throw new RuntimeException(ie);
+            }
+
+            /*// Create a temp list.
             final ArrayList<SparseLabel> currentLabels = new ArrayList<SparseLabel>(operatedLabels);
 
             // For each dilated Label
@@ -273,7 +354,7 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
                         getOrCreate(sl1.getValue(), overlap).add(find(labels, sl0));
                     }
                 }
-            }
+            }*/
         }
     }
 
@@ -450,6 +531,18 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
     {
         imageMap.clear();
         imageMap = null;
+    }
+
+    private ExecutorService localService()
+    {
+        if (Cluster.isClusterService(service))
+        {
+            return Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        }
+        else
+        {
+            return service;
+        }
     }
 
     public void setService(ExecutorService service)
