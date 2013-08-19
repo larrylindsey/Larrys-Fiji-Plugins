@@ -3,15 +3,30 @@ package edu.utexas.clm.synapses.segpipeline.data.graph.feature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
+import java.util.Collection;
+
 /**
  *
  */
 public class DenseGroundTruthEdgeFeature extends SparseLabelEdgeFeature
 {
+    private final Collection<SparseLabel> annotations;
+
+    public DenseGroundTruthEdgeFeature(final Collection<SparseLabel> annotations)
+    {
+        this.annotations = annotations;
+    }
+
+
     @Override
     public int numDimensions()
     {
         return 1;
+    }
+
+    public SparseLabelNodeFeature nodeFeature()
+    {
+        return new DenseGroundTruthNodeFeature(annotations);
     }
 
     @Override

@@ -4,8 +4,10 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
 import net.imglib2.Cursor;
+import net.imglib2.RandomAccess;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.RealType;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -233,6 +235,19 @@ public class SparseLabelFactory
             int x = i % sl.getWidth();
             int y = i / sl.getWidth();
             to.set(x, y, from.getPixel(x, y));
+        }
+    }
+
+    public static void addLabelTo(ImageProcessor to, SparseLabel sl, Img<? extends RealType> from)
+    {
+        RandomAccess<? extends RealType> randomAccess = from.randomAccess();
+        int[] xy = new int[2];
+        for (int i : sl.getIdx())
+        {
+            xy[0] = i % sl.getWidth();
+            xy[1] = i / sl.getWidth();
+            randomAccess.setPosition(xy);
+            to.setf(xy[0], xy[1], randomAccess.get().getRealFloat());
         }
     }
 

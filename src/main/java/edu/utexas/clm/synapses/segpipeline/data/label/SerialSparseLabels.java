@@ -73,6 +73,7 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         final int begin;
 
 
+
         public FindOverlapCallable(final SparseLabel label, final TreeSet<SparseLabel> origLabels,
                                    final List<SparseLabel> opLabels, final int begin)
         {
@@ -113,6 +114,8 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
     private boolean isOverlapPopulated;
     private ExecutorService service;
 
+    private int width, height;
+
 
     public SerialSparseLabels()
     {
@@ -121,11 +124,15 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         imageMap = null;
         isOverlapPopulated = false;
         setNumProcessors(0);
+        width = -1;
+        height = -1;
     }
 
     public SerialSparseLabels(final SerialSparseLabels labelsIn)
     {
         this();
+        width = labelsIn.width;
+        height = labelsIn.height;
         for (Integer key : labelsIn.serialLabels.keySet())
         {
             serialLabels.put(key, new TreeSet<SparseLabel>(serialLabels.get(key)));
@@ -134,7 +141,23 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
 
     public boolean add(final SparseLabel sl)
     {
+        if (width < 0 || height < 0)
+        {
+            width = sl.getWidth();
+            height = sl.getHeight();
+        }
+
         return getOrCreate(sl.getIndex()).add(sl);
+    }
+
+    public int getWidth()
+    {
+        return width;
+    }
+
+    public int getHeight()
+    {
+        return height;
     }
 
     public ArrayList<SparseLabel> getLabels(final int index)
@@ -196,6 +219,26 @@ public class SerialSparseLabels extends AbstractCollection<SparseLabel> implemen
         {
             return null;
         }
+    }
+
+    public int[] indices()
+    {
+        final TreeSet<Integer> indexSet = new TreeSet<Integer>();
+        final int[] indexArray;
+        int i = 0;
+
+        for (final SparseLabel sl : this)
+        {
+            indexSet.add(sl.getIndex());
+        }
+
+        indexArray = new int[indexSet.size()];
+        for (int index : indexSet)
+        {
+            indexArray[i++] = index;
+        }
+
+        return indexArray;
     }
 
     public SerialSparseLabels subSeries(int beg, int end)

@@ -78,7 +78,7 @@ public class WekaClassifierMap implements EdgeMap
         trainData.setClassIndex(trainData.numAttributes() - 1);
         dataInfo.setClassIndex(dataInfo.numAttributes() - 1);
 
-        for (final Duplex<Integer, Integer> key : keys)
+        /*for (final Duplex<Integer, Integer> key : keys)
         {
             if (gtGraph.getEdgeValues(key)[0] == 0f)
             {
@@ -91,7 +91,7 @@ public class WekaClassifierMap implements EdgeMap
         }
 
         posWt = (float)negCnt / (float)keys.size();
-        negWt = (float)posCnt / (float)keys.size();
+        negWt = (float)posCnt / (float)keys.size();*/
 
         // For each edge in the ground-truth graph, find the corresponding edge in the feature
         // graph, if it exists. Copy
@@ -109,8 +109,8 @@ public class WekaClassifierMap implements EdgeMap
                 }
                 dVector[size] = gtGraph.getEdgeValues(key)[0];
 
-                wt = dVector[size] == 0 ? posWt : negWt;
-
+//                wt = dVector[size] == 0 ? posWt : negWt;
+                wt = 1.0f;
                 trainData.add(new DenseInstance(wt, dVector));
             }
         }

@@ -183,12 +183,45 @@ public class SparseVectorEdgeGraph implements Serializable
         return getEdgeValues(new Duplex<Integer, Integer>(a, b));
     }
 
+    /**
+     *Returns a TreeSet of labels equivalent to the one with the given value, as according to the
+     * passed-in map. If this graph has no associated labels, this function returns an empty set.
+     * @param value the label value of interest
+     * @param map an EdgeMap that maps the edges of this graph to 0 for edges of equivalent labels,
+     *            or any nonzero value for non-equivalent edges.
+     * @return a TreeSet of labels equivalent to the one with the given value, as according to the
+     * passed-in map
+     */
     public TreeSet<SparseLabel> equivalentLabels(final int value, final EdgeMap map)
+    {
+        if (labels != null)
+        {
+            return equivalentLabels(value, map, labels);
+        }
+        else
+        {
+            return new TreeSet<SparseLabel>();
+        }
+    }
+
+    /**
+     * Returns a TreeSet of labels equivalent to the one with the given value, as according to the
+     * passed-in map.
+     * @param value the label value of interest
+     * @param map an EdgeMap that maps the edges of this graph to 0 for edges of equivalent labels,
+     *            or any nonzero value for non-equivalent edges.
+     * @param inLabels the SerialSparseLabels from which to retrieve the SparseLabels
+     * @return a TreeSet of labels equivalent to the one with the given value, as according to the
+     * passed-in map.
+     */
+    public TreeSet<SparseLabel> equivalentLabels(final int value, final EdgeMap map,
+                                                 final SerialSparseLabels inLabels)
     {
         final List<Duplex<Integer, Integer>> edgeList;
         final int minEq;
         final TreeSet<SparseLabel> eqLabels;
         final TreeSet<Integer> eqVals;
+        final float[] mapVal = new float[1];
 
         if (map.size() != 1)
         {
@@ -202,7 +235,17 @@ public class SparseVectorEdgeGraph implements Serializable
         }
 
         // Sorted edge list
-        edgeList = new ArrayList<Duplex<Integer, Integer>>(edges.keySet());
+        edgeList = new ArrayList<Duplex<Integer, Integer>>();
+
+        for (final Duplex<Integer, Integer> key : edges.keySet())
+        {
+            map.map(edges.get(key), mapVal, key);
+            if (mapVal[0] == 0)
+            {
+                edgeList.add(key);
+            }
+        }
+
         Collections.sort(edgeList, duplexComparator());
 
         minEq = minimumEquivalentLabel(value, edgeList);
@@ -212,7 +255,7 @@ public class SparseVectorEdgeGraph implements Serializable
 
         for (int val : eqVals)
         {
-            eqLabels.addAll(labels.getLabelsByValue(val));
+            eqLabels.addAll(inLabels.getLabelsByValue(val));
         }
 
         return eqLabels;
