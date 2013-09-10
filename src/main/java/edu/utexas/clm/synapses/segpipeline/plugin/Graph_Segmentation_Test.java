@@ -48,6 +48,37 @@ import java.util.TreeSet;
 public class Graph_Segmentation_Test implements PlugIn
 {
     private String dir;
+    private SerialSparseLabels trainLabels, positiveLabels, testLabels;
+    private Element trainElement, testElement;
+
+    private SparseVectorEdgeGraph getMappedGraph(final SparseLabelEdgeFeature[] features)
+    {
+        final SparseVectorEdgeGraph testGraph, trainGraph, trainAnnotationGraph, mapGraph;
+        final FastRandomForest rf = new FastRandomForest();
+        final WekaClassifierMap map = new WekaClassifierMap(rf);
+
+        trainGraph = getGraph(trainElement, trainLabels, features);
+        trainAnnotationGraph = getAnnotationGraph(trainElement,
+                trainLabels, positiveLabels);
+        testGraph = getGraph(testElement, testLabels, features);
+
+        IJ.log(new ArrayList<SparseLabelEdgeFeature>(trainAnnotationGraph.getEdgeFeatures()).get(0).toString());
+
+        IJ.log("Train graph has " + trainGraph.getEdges().size() + " edges");
+        IJ.log("Annotation graph has " + trainAnnotationGraph.getEdges().size() + " edges");
+        IJ.log("Test graph has " + testGraph.getEdges().size() + " edges");
+
+
+        IJ.log("Training classifier");
+        map.trainClassifier(trainGraph, trainAnnotationGraph);
+
+        IJ.log("Mapping test edges");
+        mapGraph = testGraph.mapEdges(map);
+        IJ.log("Mapped test graph has " + mapGraph.getEdges().size() + " edges");
+
+        return mapGraph;
+    }
+
 
     public void run(String s)
     {
@@ -68,63 +99,34 @@ public class Graph_Segmentation_Test implements PlugIn
                     DocumentBuilderFactory.newInstance().newDocumentBuilder();
             final Document doc = docBuilder.parse(file);
 
-            final SparseVectorEdgeGraph testGraph, trainGraph, trainAnnotationGraph, mapGraph,
-                    mapTrainGraph;
-            final SerialSparseLabels trainLabels, positiveLabels, negativeLabels, testLabels;
+            final SparseVectorEdgeGraph mapGraphI, mapGraphX, mapGraph;
 
-            final Element trainElement = (Element)doc.getElementsByTagName("TrainLabels").item(0);
-            final Element testElement = (Element)doc.getElementsByTagName("TestLabels").item(0);
 
-            final FastRandomForest rf = new FastRandomForest();
-            final WekaClassifierMap map = new WekaClassifierMap(rf);
+            final SparseLabelEdgeFeature[] inPlaneFeatures = {
+                    new ImageHistogramSimilarityFeature(true),
+                    new OrientationEdgeFeature(),
+                    new SizeFeature(true)};
+            final SparseLabelEdgeFeature[] crossPlaneFeatures = {
+                    new ImageHistogramSimilarityFeature(false),
+                    new IntersectionOverUnionFeature(),
+                    new MaxOverlapFeature(),
+                    new SizeFeature(false)};
 
-//            boolean logged = false;
+            trainElement = (Element)doc.getElementsByTagName("TrainLabels").item(0);
+            testElement = (Element)doc.getElementsByTagName("TestLabels").item(0);
 
             trainLabels = getLabels(trainElement, 32);
             positiveLabels = getLabels(getChild(trainElement, "Positive"));
-            //negativeLabels = getLabels(getChild(trainElement, "Negative"));
             testLabels = getLabels(testElement, 32);
 
-//            for (SparseLabel neg : negativeLabels)
-//            {
-//                for (SparseLabel label : trainLabels)
-//                {
-//                    if (neg.getIndex() == label.getIndex() && neg.intersect(label))
-//                    {
-//                        IJ.log("Negative label " + neg.getValue() + " intersects " + label.getValue());
-//                        logged = true;
-//                    }
-//                }
-//            }
+            mapGraphI = getMappedGraph(inPlaneFeatures);
+            mapGraphX = getMappedGraph(crossPlaneFeatures);
 
-//            if (!logged)
-//            {
-//                IJ.log("No negative intersections");
-//            }
-
-            trainGraph = getGraph(trainElement, trainLabels);
-            trainAnnotationGraph = getAnnotationGraph(trainElement,
-                    trainLabels, positiveLabels);
-            testGraph = getGraph(testElement, testLabels);
-
-            IJ.log(new ArrayList<SparseLabelEdgeFeature>(trainAnnotationGraph.getEdgeFeatures()).get(0).toString());
-
-            IJ.log("Train graph has " + trainGraph.getEdges().size() + " edges");
-            IJ.log("Annotation graph has " + trainAnnotationGraph.getEdges().size() + " edges");
-            IJ.log("Test graph has " + testGraph.getEdges().size() + " edges");
-
-//            rf.setNumTrees((int)Math.sqrt(testGraph.getVectorSize()));
-//            rf.setNumTrees(2);
-//            rf.setNumFeatures(trainGraph.getVectorSize());
-
-            IJ.log("Training classifier");
-            map.trainClassifier(trainGraph, trainAnnotationGraph);
-
-            IJ.log("Mapping test edges");
-            mapGraph = testGraph.mapEdges(map);
-            IJ.log("Mapped test graph has " + mapGraph.getEdges().size() + " edges");
+            mapGraph = mapGraphI;
+            mapGraph.merge(mapGraphX);
 
             //displayEquivalentLabels(testLabels, mapGraph, 1425);
+/*
 
             IJ.log("%%% Begin matlab assignment %%%");
             IJ.log("trainEdges5 = [");
@@ -134,8 +136,9 @@ public class Graph_Segmentation_Test implements PlugIn
                         trainAnnotationGraph.getEdgeValues(edge)[0] + ";");
             }
             IJ.log("];\n");
+*/
 
-            IJ.log("testEdges5 = [");
+            IJ.log("testEdges = [");
             for (Duplex<Integer, Integer> edge : mapGraph.getEdges())
             {
                 IJ.log("\t" + edge.a + ", " + edge.b + ", " +
@@ -222,16 +225,19 @@ public class Graph_Segmentation_Test implements PlugIn
     }
 
     private SparseVectorEdgeGraph getGraph(final Element e,
-                                           final SerialSparseLabels labels)
+                                           final SerialSparseLabels labels,
+                                           final SparseLabelEdgeFeature[] features)
     {
         IJ.log("Creating SVEG factory");
-        final SVEGFactory factory = new SVEGFactory(labels,
+        final SVEGFactory factory = new SVEGFactory(labels, features);
+        /*
                 new OrientationEdgeFeature(),
                 new InplaneOverlapHistogramFeature(32, 256),
                 new MaxOverlapFeature(),
                 new IntersectionOverUnionFeature(),
                 new SizeFeature(),
-                new ImageHistogramSimilarityFeature());
+                new ImageHistogramSimilarityFeature()
+         */
         IJ.log("Associating images");
         associateImages(e, labels);
         IJ.log("Closing labels in place");

@@ -3,15 +3,21 @@ package edu.utexas.clm.synapses.segpipeline.data.graph.feature;
 import edu.utexas.clm.synapses.segpipeline.data.graph.SVEGFactory;
 import edu.utexas.clm.synapses.segpipeline.data.label.SparseLabel;
 
-import java.util.ArrayList;
-
 /**
  *
  */
 public class SizeFeature extends SparseLabelEdgeFeature
 {
+    private final boolean inPlane;
+
+    public SizeFeature(final boolean inPlane)
+    {
+        this.inPlane = inPlane;
+    }
+
     @Override
-    public int numDimensions() {
+    public int numDimensions()
+    {
         return 2;
     }
 
@@ -27,7 +33,8 @@ public class SizeFeature extends SparseLabelEdgeFeature
     @Override
     public Iterable<SparseLabel> accept(SVEGFactory factory, SparseLabel sl)
     {
-        return acceptAllNeighbors(factory, sl);
+        return inPlane ? acceptInPlaneNeighbors(factory, sl) :
+                acceptCrossPlaneNeighbors(factory, sl);
     }
 
     @Override

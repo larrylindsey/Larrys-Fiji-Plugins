@@ -28,7 +28,7 @@ public abstract class AbstractInplaneEdgeFeature extends SparseLabelEdgeFeature
         }
         else
         {
-            return factory.getLabels().getOverlap(sl);
+            return acceptInPlaneNeighbors(factory, sl);
         }
     }
 }

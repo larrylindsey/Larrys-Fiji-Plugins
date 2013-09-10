@@ -79,6 +79,28 @@ public abstract class SparseLabelEdgeFeature implements Serializable
 
     public abstract String name();
 
+    protected ArrayList<SparseLabel> acceptInPlaneNeighbors(final SVEGFactory factory,
+                                                            final SparseLabel sl)
+    {
+        return factory.getLabels().getOverlap(sl);
+    }
+
+    protected ArrayList<SparseLabel> acceptCrossPlaneNeighbors(final SVEGFactory factory,
+                                                               final SparseLabel sl)
+    {
+        ArrayList<SparseLabel> list = new ArrayList<SparseLabel>();
+
+        for (final SparseLabel label : factory.getLabels().getLabels(sl.getIndex() + 1))
+        {
+            if (label.intersect(sl))
+            {
+                list.add(label);
+            }
+        }
+
+        return list;
+    }
+
     protected ArrayList<SparseLabel> acceptAllNeighbors(final SVEGFactory factory,
                                                         final SparseLabel sl)
     {

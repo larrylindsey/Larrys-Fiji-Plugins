@@ -19,17 +19,6 @@ public abstract class AbstractSetOperationFeature extends SparseLabelEdgeFeature
 
     public Collection<SparseLabel> accept(final SVEGFactory factory, final SparseLabel sl)
     {
-        final SerialSparseLabels all = factory.getLabels();
-        final ArrayList<SparseLabel> acceptList =
-                new ArrayList<SparseLabel>(all.getLabels(sl.getIndex() + 1).size() / 2);
-        for (final SparseLabel currSl : all.getLabels(sl.getIndex() + 1))
-        {
-            if (currSl.isBoundingBoxOverlap(sl))
-            {
-                acceptList.add(currSl);
-            }
-        }
-        acceptList.trimToSize();
-        return acceptList;
+        return acceptCrossPlaneNeighbors(factory, sl);
     }
 }

@@ -23,13 +23,15 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
     private final int nHist;
     private final float imageMax;
     private final LabelOperation borderOp;
+    private final boolean inPlane;
 
-    public ImageHistogramSimilarityFeature()
+    public ImageHistogramSimilarityFeature(final boolean inPlane)
     {
         final int[][] strel8 = Strels.diskStrel(8);
         nHist = 255;
         imageMax = 255;
         borderOp = new DilatedBorderOperation(strel8);
+        this.inPlane = inPlane;
     }
 
     @Override
@@ -157,7 +159,8 @@ public class ImageHistogramSimilarityFeature extends SparseLabelEdgeFeature
     @Override
     public Iterable<SparseLabel> accept(SVEGFactory factory, SparseLabel sl)
     {
-        return acceptAllNeighbors(factory, sl);
+        return inPlane ? acceptInPlaneNeighbors(factory, sl) :
+                acceptCrossPlaneNeighbors(factory, sl);
     }
 
     @Override
